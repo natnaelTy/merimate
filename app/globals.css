@@ -1,26 +1,63 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7f5f0;
+  --foreground: #0b0e12;
+  --card: #ffffff;
+  --card-foreground: #0b0e12;
+  --muted: #eef1f6;
+  --muted-foreground: #525a66;
+  --primary: #059669;
+  --primary-foreground: #ecfdf5;
+  --secondary: #f0f3f8;
+  --secondary-foreground: #111827;
+  --border: #e2e8f0;
+  --ring: #101828;
+  --accent: #fde68a;
+  --accent-foreground: #1f2937;
+  --sidebar: #0b0e12;
+  --sidebar-foreground: #e5e7eb;
+  --sidebar-muted: #9ca3af;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --font-sans: var(--font-display);
+  --font-mono: var(--font-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
 }
 
 body {
-  background: var(--background);
+  background: radial-gradient(
+      circle at top left,
+      rgba(253, 230, 138, 0.35),
+      transparent 45%
+    ),
+    linear-gradient(180deg, #f7f5f0 0%, #ffffff 60%, #f4f6fb 100%);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(253, 230, 138, 0.8);
 }
