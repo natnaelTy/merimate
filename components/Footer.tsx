@@ -1,25 +1,57 @@
-import Link from "next/link";
 import Image from "next/image";
+import { Linkedin, Mail, Twitter } from "lucide-react";
+import { Footer } from "@/components/ui/footer";
+import ThemeToggle from "@/components/ThemeToggle";
+
+const mainLinks = [
+  { label: "Features", href: "/#features" },
+  { label: "Workflow", href: "/#workflow" },
+  { label: "Pricing", href: "/pricing" },
+  { label: "Sign in", href: "/signin" },
+  { label: "Start free", href: "/signup" },
+  { label: "Dashboard", href: "/dashboard" },
+];
+
+const socialLinks = [
+  {
+    label: "Email",
+    href: "mailto:hello@merimate.com",
+    icon: <Mail size={16} />,
+  },
+  {
+    label: "LinkedIn",
+    href: "https://www.linkedin.com",
+    icon: <Linkedin size={16} />,
+  },
+  { label: "Twitter", href: "https://x.com", icon: <Twitter size={16} /> },
+];
+
+const legalLinks = [
+  { label: "Support", href: "mailto:hello@merimate.com" },
+  { label: "Sign in", href: "/signin" },
+];
+
 export default function MarketingFooter() {
   return (
-    <footer className="border-t border-border/60 pt-10 text-sm text-muted-foreground">
-      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-        <div className="space-y-2">
-          <Image src="/merimate.png" alt="Merimate logo" width={90} height={90} className="object-cover" />
-          <p>Freelancer CRM + AI follow-up assistant.</p>
-        </div>
-        <div className="flex flex-wrap gap-4">
-          <Link href="/signin" className="hover:text-foreground">
-            Sign in
-          </Link>
-          <a href="#features" className="hover:text-foreground">
-            Features
-          </a>
-          <a href="#pricing" className="hover:text-foreground">
-            Pricing
-          </a>
-        </div>
-      </div>
-    </footer>
+    <Footer
+      logo={
+        <Image
+          src="/merimate.png"
+          alt="Merimate logo"
+          width={58}
+          height={58}
+          className="object-cover"
+        />
+      }
+      brandName="Merimate"
+      description="Your AI deal teammate for faster, clearer follow-ups."
+      socialLinks={socialLinks}
+      mainLinks={mainLinks}
+      legalLinks={legalLinks}
+      copyright={{
+        text: `© ${new Date().getFullYear()} Merimate. All rights reserved.`,
+      }}
+      themeSwitcher={<ThemeToggle />}
+    />
   );
 }

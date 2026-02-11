@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/dashboard/AppShell";
+import { ThemeProviderWrapper } from "@/components/ThemeProviderWrapprer";
+
 
 const sans = Space_Grotesk({
   variable: "--font-display",
@@ -26,7 +28,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${sans.variable} ${mono.variable} antialiased`}>
-        <AppShell>{children}</AppShell>
+        <ThemeProviderWrapper>
+          <AppShell>{children}</AppShell>
+        </ThemeProviderWrapper>
       </body>
     </html>
   );
