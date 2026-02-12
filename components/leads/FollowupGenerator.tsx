@@ -57,7 +57,7 @@ export default function FollowupGenerator({
         <p className="text-sm text-rose-600">{error}</p>
       ) : null}
       {result ? (
-        <div className="rounded-lg border border-border/60 bg-white/80 p-4 text-sm">
+        <div className="rounded-lg border p-4 text-sm">
           {result}
         </div>
       ) : null}
