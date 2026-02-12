@@ -4,11 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerSupabaseReadOnly } from "@/lib/supabase/server";
 import { signInWithEmail, signInWithGoogle } from "@/app/(auth)/actions";
+import { FcGoogle } from "react-icons/fc";
+
+
 
 export default async function SignInPage() {
-  const supabase = await createServerSupabase();
+  const supabase = await createServerSupabaseReadOnly();
   const { data } = await supabase.auth.getUser();
   if (data.user) {
     redirect("/dashboard");
@@ -33,7 +36,6 @@ export default async function SignInPage() {
               id="email"
               name="email"
               type="email"
-              placeholder="you@studio.com"
               required
             />
           </div>
@@ -48,7 +50,7 @@ export default async function SignInPage() {
         </div>
         <form action={signInWithGoogle}>
           <Button type="submit" variant="outline" className="w-full">
-            Continue with Google
+          <FcGoogle className="mr-2 h-4 w-4" />  Continue with Google 
           </Button>
         </form>
         <div className="flex items-center justify-between text-xs text-muted-foreground">
