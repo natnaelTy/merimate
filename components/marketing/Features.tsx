@@ -1,7 +1,19 @@
-"use client"
+"use client";
 
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Brain, BellRing, Kanban, FileText, BarChart3, Clock } from "lucide-react"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import {
+  Brain,
+  BellRing,
+  Kanban,
+  FileText,
+  BarChart3,
+  Clock,
+} from "lucide-react";
 
 const features = [
   {
@@ -40,7 +52,7 @@ const features = [
     description:
       "Spend less time managing spreadsheets and more time doing paid work.",
   },
-]
+];
 
 export default function FeaturesSection() {
   return (
@@ -53,35 +65,36 @@ export default function FeaturesSection() {
 
         <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
           Merimate keeps your leads organized, reminds you when to follow up,
-          and helps you write better replies — so you win more work with less stress.
+          and helps you write better replies — so you win more work with less
+          stress.
         </p>
 
         {/* Grid */}
         <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feature, i) => {
-            const Icon = feature.icon
+            const Icon = feature.icon;
 
             return (
               <Card
                 key={i}
-                className="rounded-2xl text-left hover:shadow-md transition"
+                className="rounded-lg text-left border border-transparent transition-colors duration-300 hover:border-primary/70 hover:shadow-md hover:shadow-primary/20"
               >
                 <CardHeader>
-                  <Icon className="h-6 w-6 mb-4 text-primary" />
+                  <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10 mb-4">
+                    <Icon className="h-6 w-6 text-primary" />
+                  </div>
 
-                  <CardTitle className="text-lg">
-                    {feature.title}
-                  </CardTitle>
+                  <CardTitle className="text-lg">{feature.title}</CardTitle>
 
                   <CardDescription className="text-sm leading-relaxed">
                     {feature.description}
                   </CardDescription>
                 </CardHeader>
               </Card>
-            )
+            );
           })}
         </div>
       </div>
     </section>
-  )
+  );
 }
