@@ -3,7 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
-import { cn } from "@/lib/utils";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Separator } from "@/components/ui/separator";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -14,39 +27,38 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  const isLeads = pathname.startsWith("/leads");
+  const rootLabel = isLeads ? "Leads" : "Dashboard";
+  const rootHref = isLeads ? "/leads" : "/dashboard";
+  const hasDetail = isLeads && pathname.split("/").filter(Boolean).length > 1;
+  const pageLabel = isLeads ? (hasDetail ? "Lead details" : "All leads") : "Overview";
+
   return (
-    <div className="flex min-h-screen">
+    <SidebarProvider>
       <Sidebar />
-      <main className="flex-1 px-6 py-10 lg:px-12">
-        <div className="mb-8 flex items-center justify-between rounded-lg border border-border/60 bg-white/80 px-4 py-3 text-sm shadow-sm lg:hidden">
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-              Merimate
-            </p>
-            <p className="font-semibold">Workspace</p>
-          </div>
-          <div className="flex gap-2">
-            {[
-              { label: "Dashboard", href: "/dashboard" },
-              { label: "Leads", href: "/leads" },
-            ].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "rounded-lg px-3 py-1 text-xs font-medium",
-                  pathname.startsWith(item.href)
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground"
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </div>
-        </div>
-        <div className="mx-auto w-full max-w-6xl space-y-8">{children}</div>
-      </main>
-    </div>
+      <SidebarInset className="bg-black/90">
+        <header className="flex h-16 shrink-0 items-center gap-2 px-4 ">
+          <SidebarTrigger className="-ml-1" />
+            <Separator
+              orientation="vertical"
+              className="mr-2 data-[orientation=vertical]:h-4"
+            />
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem className="hidden md:block">
+                <BreadcrumbLink asChild>
+                  <Link href={rootHref}>{rootLabel}</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{pageLabel}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </header>
+        {children}
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
