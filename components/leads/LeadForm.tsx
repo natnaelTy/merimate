@@ -67,7 +67,7 @@ export default function LeadForm({
             id="status"
             name="status"
             defaultValue={defaultValues?.status ?? "new"}
-            className="h-10 w-full rounded-lg border border-border/70 bg-white/80 px-3 text-sm shadow-sm outline-none transition focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-10 w-full rounded-lg border px-3 text-sm shadow-sm outline-none transition focus-visible:ring-2 focus-visible:ring-ring"
           >
             {statuses.map((status) => (
               <option key={status} value={status}>
