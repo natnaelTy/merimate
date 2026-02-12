@@ -4,11 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerSupabaseReadOnly } from "@/lib/supabase/server";
 import { signUpWithEmail, signUpWithGoogle } from "@/app/(auth)/actions";
 
 export default async function SignUpPage() {
-  const supabase = await createServerSupabase();
+  const supabase = await createServerSupabaseReadOnly();
   const { data } = await supabase.auth.getUser();
   if (data.user) {
     redirect("/dashboard");
