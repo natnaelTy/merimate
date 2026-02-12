@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import StatsCard from "@/components/dashboard/StatsCard";
 import RecentLeads from "@/components/dashboard/RecentLeads";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerSupabaseReadOnly } from "@/lib/supabase/server";
 import type { LeadStatus } from "@/types/lead";
 
 export default async function DashboardPage() {
-  const supabase = await createServerSupabase();
+  const supabase = await createServerSupabaseReadOnly();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -36,22 +36,14 @@ export default async function DashboardPage() {
   const winRate = won + lost > 0 ? Math.round((won / (won + lost)) * 100) : 0;
 
   return (
-    <div className="space-y-8">
-      <div>
-        <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
-          Dashboard
-        </p>
-        <h1 className="text-3xl font-semibold">Your pipeline at a glance</h1>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="flex flex-1 flex-col gap-4 p-4">
+      <div className="grid auto-rows-min gap-4 md:grid-cols-3">
         <StatsCard
           title="Total leads"
           value={total}
           description="All active and closed opportunities."
         />
         <StatsCard title="Won" value={won} description="Closed this cycle." />
-        <StatsCard title="Lost" value={lost} description="Missed this cycle." />
         <StatsCard
           title="Win rate"
           value={`${winRate}%`}
@@ -59,7 +51,10 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <RecentLeads leads={leadRows.slice(0, 5)} />
+      <RecentLeads
+        className="min-h-[100vh] flex-1 md:min-h-min"
+        leads={leadRows.slice(0, 5)}
+      />
     </div>
   );
 }
