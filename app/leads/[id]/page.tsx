@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import FollowupGenerator from "@/components/leads/FollowupGenerator";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerSupabaseReadOnly } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
 import { updateLead } from "@/app/leads/actions";
 import type { LeadStatus } from "@/types/lead";
@@ -24,7 +24,7 @@ export default async function LeadDetailPage({
 }: {
   params: { id: string };
 }) {
-  const supabase = await createServerSupabase();
+  const supabase = await createServerSupabaseReadOnly();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -47,7 +47,7 @@ export default async function LeadDetailPage({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
       <div>
         <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
           Lead detail
