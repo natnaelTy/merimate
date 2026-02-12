@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import LeadCreateDialog from "@/components/leads/LeadCreateDialog";
 import LeadTable from "@/components/leads/LeadTable";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerSupabaseReadOnly } from "@/lib/supabase/server";
 import type { LeadStatus } from "@/types/lead";
 
 export default async function LeadsPage() {
-  const supabase = await createServerSupabase();
+  const supabase = await createServerSupabaseReadOnly();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -31,7 +31,7 @@ export default async function LeadsPage() {
     })) ?? [];
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-1 flex-col gap-4 p-4 ">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
@@ -43,7 +43,7 @@ export default async function LeadsPage() {
       </div>
 
       {leadRows.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border/60 bg-white/60 p-10 text-center">
+        <div className="rounded-xl border border-dashed border-border/60 bg-muted/50 p-10 text-center">
           <p className="text-sm text-muted-foreground">
             No leads yet. Add your first lead to start tracking follow-ups.
           </p>
