@@ -55,10 +55,10 @@ export default function WorkflowSection() {
             return (
               <Card
                 key={i}
-                className="rounded-2xl text-left transition hover:shadow-md"
+                className="rounded-lg text-left border border-transparent transition-colors duration-300 hover:border-primary/70 hover:shadow-md hover:shadow-primary/20"
               >
                 <CardHeader>
-                  <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-primary/10 mb-4">
+                  <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10 mb-4">
                     <Icon className="h-5 w-5 text-primary" />
                   </div>
 
