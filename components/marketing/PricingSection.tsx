@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Check } from "lucide-react"
+import { Check, Sparkles } from "lucide-react"
 
 const plans = [
   {
@@ -10,7 +10,7 @@ const plans = [
     price: "$0",
     description: "Perfect for getting started",
     features: [
-      "Up to 20 leads",
+      "Up to 5 leads",
       "Statuses & notes",
       "Manual reminders",
       "10 AI follow-ups / month",
@@ -50,11 +50,11 @@ export default function PricingSection() {
         </p>
 
         {/* Cards */}
-        <div className="mt-14 grid gap-8 md:grid-cols-2">
+        <div className="mt-14 grid gap-8 md:grid-cols-2 md:max-w-4xl md:mx-auto">
           {plans.map((plan) => (
             <Card
               key={plan.name}
-              className="relative flex flex-col justify-between rounded-lg shadow-sm transition hover:shadow-lg"
+              className="relative flex flex-col justify-between rounded-lg border border-transparent shadow-sm transition-colors duration-300 hover:border-primary/70 hover:shadow-lg hover:shadow-primary/20"
             >
 
               <CardHeader>
@@ -78,7 +78,7 @@ export default function PricingSection() {
                 </ul>
 
                 <Button
-                  className="w-full rounded-xl"
+                  className="w-full"
                   variant={plan.popular ? "default" : "outline"}
                 >
                   {plan.cta}
@@ -89,9 +89,14 @@ export default function PricingSection() {
         </div>
 
         {/* Trust line */}
-        <p className="mt-10 text-sm text-muted-foreground">
-          One extra client can cover your entire year of Merimate.
-        </p>
+        <div className="mt-10 mx-auto flex w-full max-w-lg items-center justify-center gap-1 rounded-lg border border-primary/20 bg-primary/5 px-6 py-2 text-sm text-muted-foreground shadow-sm">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full  text-primary">
+            <Sparkles className="h-4 w-4" />
+          </span>
+          <span>
+            One extra client can cover your entire year of Merimate.
+          </span>
+        </div>
       </div>
     </section>
   )
