@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/dashboard/AppShell";
 import { ThemeProviderWrapper } from "@/components/ThemeProviderWrapprer";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 
-const sans = Space_Grotesk({
+const sans = Inter({
   variable: "--font-display",
   subsets: ["latin"],
 });
@@ -29,7 +30,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${sans.variable} ${mono.variable} antialiased`}>
         <ThemeProviderWrapper>
-          <AppShell>{children}</AppShell>
+          <TooltipProvider>
+            <AppShell>{children}</AppShell>
+          </TooltipProvider>
         </ThemeProviderWrapper>
       </body>
     </html>
