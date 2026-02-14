@@ -38,6 +38,49 @@ export async function createLead(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+export async function createLeadFromProposal(formData: FormData) {
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/signin");
+  }
+
+  const clientName = normalize(formData.get("clientName"));
+  const jobTitle = normalize(formData.get("jobTitle"));
+  const platform = normalize(formData.get("platform")) || null;
+  const jobDescription = normalize(formData.get("jobDescription"));
+  const proposal = normalize(formData.get("proposal"));
+  const extraContext = normalize(formData.get("extraContext"));
+
+  if (!clientName || !jobTitle || !jobDescription || !proposal) {
+    return;
+  }
+
+  const notes = [
+    `Job description:\n${jobDescription}`,
+    extraContext ? `Extra context:\n${extraContext}` : "",
+    `Proposal:\n${proposal}`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  await supabase.from("leads").insert({
+    user_id: user.id,
+    client_name: clientName,
+    job_title: jobTitle,
+    platform,
+    status: "proposal",
+    last_contact: new Date().toISOString().slice(0, 10),
+    notes,
+  });
+
+  revalidatePath("/leads");
+  revalidatePath("/dashboard");
+}
+
 export async function updateLead(formData: FormData) {
   const id = normalize(formData.get("id"));
   if (!id) return;
