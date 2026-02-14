@@ -1,56 +1,69 @@
-import { redirect } from "next/navigation";
-import LeadCreateDialog from "@/components/leads/LeadCreateDialog";
-import LeadTable from "@/components/leads/LeadTable";
-import { createServerSupabaseReadOnly } from "@/lib/supabase/server";
-import type { LeadStatus } from "@/types/lead";
+"use client";
 
-export default async function LeadsPage() {
-  const supabase = await createServerSupabaseReadOnly();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+import { useEffect, useState } from "react";
+import { Card } from "@/components/ui/card";
+import AddLeadDialog from "@/components/leads/LeadCreateDialog";
+import { Separator } from "@/components/ui/separator";
+import type { Lead } from "@/types/lead";
 
-  if (!user) {
-    redirect("/signin");
-  }
+const formatStatus = (status: Lead["status"]) =>
+  status
+    .split("-")
+    .map((part) => part[0]?.toUpperCase() + part.slice(1))
+    .join(" ");
 
-  const { data: leads } = await supabase
-    .from("leads")
-    .select("id, client_name, job_title, platform, status, last_contact")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+export default function LeadsPage() {
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const leadRows =
-    leads?.map((lead) => ({
-      id: lead.id as string,
-      clientName: lead.client_name as string,
-      jobTitle: lead.job_title as string,
-      platform: lead.platform as string | null,
-      status: lead.status as LeadStatus,
-      lastContact: lead.last_contact as string | null,
-    })) ?? [];
+  useEffect(() => {
+    const loadLeads = async () => {
+      const response = await fetch("/api/leads", { cache: "no-store" });
+      if (!response.ok) {
+        setError("Unable to load leads");
+        setIsLoading(false);
+        return;
+      }
+      const data = (await response.json()) as Lead[];
+      setLeads(data);
+      setIsLoading(false);
+    };
+
+    loadLeads();
+  }, []);
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 ">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
-            Leads
-          </p>
-          <h1 className="text-3xl font-semibold">Lead management</h1>
-        </div>
-        <LeadCreateDialog />
+    <div className="p-3 max-w-6xl w-full mx-auto space-y-8">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-semibold">Leads</h1>
+        <AddLeadDialog
+          onLeadCreated={(lead) => setLeads((prev) => [lead, ...prev])}
+        />
       </div>
 
-      {leadRows.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border/60 bg-muted/50 p-10 text-center">
-          <p className="text-sm text-muted-foreground">
-            No leads yet. Add your first lead to start tracking follow-ups.
-          </p>
-        </div>
-      ) : (
-        <LeadTable leads={leadRows} />
-      )}
+      <Separator />
+
+      {isLoading ? <p className="text-sm">Loading...</p> : null}
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+        {leads.map((lead) => (
+          <Card
+            key={lead.id}
+            className="p-5 cursor-pointer hover:shadow-md transition"
+            onClick={() => (window.location.href = `/leads/${lead.id}`)}
+          >
+            <p className="font-medium">{lead.jobTitle}</p>
+            <p className="text-sm text-muted-foreground">
+              {lead.platform || "—"}
+            </p>
+            <p className="text-xs mt-2 text-primary">
+              {formatStatus(lead.status)}
+            </p>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
