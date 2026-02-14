@@ -87,12 +87,12 @@ export default function LeadForm({
         </div>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="notes">Notes</Label>
+        <Label htmlFor="notes">Job description</Label>
         <Textarea
           id="notes"
           name="notes"
           defaultValue={defaultValues?.notes ?? ""}
-          placeholder="Key context, next steps, tone preferences."
+          placeholder="Full job description for this lead."
         />
       </div>
       <Button type="submit" className="w-full sm:w-auto">
