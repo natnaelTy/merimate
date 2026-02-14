@@ -1,14 +1,16 @@
-export type LeadStatus =
-  | "new"
-  | "proposal"
-  | "waiting"
-  | "follow-up"
-  | "won"
-  | "lost";
+export const leadStatuses = [
+  "new",
+  "proposal",
+  "waiting",
+  "follow-up",
+  "won",
+  "lost",
+] as const;
+
+export type LeadStatus = (typeof leadStatuses)[number];
 
 export type Lead = {
   id: string;
-  userId: string;
   clientName: string;
   jobTitle: string;
   platform: string | null;
@@ -16,4 +18,8 @@ export type Lead = {
   lastContact: string | null;
   notes: string | null;
   createdAt: string;
+  updatedAt: string;
+  proposal?: string;
+  description?: string;
+  reminders?: string[];
 };
