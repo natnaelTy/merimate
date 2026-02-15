@@ -1,11 +1,8 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// prisma/schema.prisma
+// learn more: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../app/generated/prisma"
 }
 
@@ -14,22 +11,19 @@ datasource db {
 }
 
 
-
-
 // ENUMS
 
 enum LeadStatus {
-  NEW       
-  PROPOSAL  
-  WAITING  
-  FOLLOW_UP 
-  WON       
-  LOST     
+  NEW
+  PROPOSAL
+  WAITING
+  FOLLOW_UP
+  WON
+  LOST
 }
 
 
 // MODELS
-
 
 model User {
   id        String   @id @db.Uuid
@@ -43,49 +37,58 @@ model User {
 }
 
 model Lead {
-  id          String     @id @default(uuid())
-  userId      String     @db.Uuid
-  clientName  String     
-  jobTitle    String     
-  platform    String?   
-  status      LeadStatus @default(NEW)
-  lastContact DateTime?  
-  description String?
-  notes       String?    
+  id          String      @id @default(uuid()) @db.Uuid
+  userId      String      @db.Uuid
+  jobTitle    String?
+  description String?    
+  platform    String?     
+  clientName  String?     
+  proposal    String?     
+  notes       String?
+  status      LeadStatus  @default(NEW)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
-  createdAt DateTime @default(now()) 
-  updatedAt DateTime @updatedAt
+  reminders   Reminder[]
+  messages    Message[]
 
-  user      User       @relation(fields: [userId], references: [id])
-  messages  Message[]
-  reminders Reminder[]
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])         
+  @@index([status])         
   @@map("leads")
 }
 
 model Message {
-  id        String   @id @default(uuid())
-  leadId    String
+  id        String   @id @default(uuid()) @db.Uuid
+  leadId    String   @db.Uuid
   userId    String   @db.Uuid
-
-  prompt    String   // what user asked AI
-  response  String   // AI reply
-
+  prompt    String   
+  response  String   
   createdAt DateTime @default(now())
 
-  lead Lead @relation(fields: [leadId], references: [id])
-  user User @relation(fields: [userId], references: [id])
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([leadId, createdAt(sort: Desc)])   
   @@map("messages")
 }
 
 model Reminder {
-  id        String   @id @default(uuid())
-  leadId    String
-  date      DateTime
-  done      Boolean  @default(false)
+  id         String     @id @default(uuid()) @db.Uuid
+  leadId     String     @db.Uuid
+  userId     String     @db.Uuid
+  reminderAt DateTime           
+  type       String     @default("follow-up")
+  message    String?              
+  sent       Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 
-  lead Lead @relation(fields: [leadId], references: [id])
+  lead       Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
+  @@index([userId, reminderAt])    
+  @@index([leadId])
+  @@index([sent, reminderAt])       
   @@map("reminders")
 }
