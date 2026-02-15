@@ -4,6 +4,7 @@ import "./globals.css";
 import AppShell from "@/components/dashboard/AppShell";
 import { ThemeProviderWrapper } from "@/components/ThemeProviderWrapprer";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 
 
 const sans = Inter({
@@ -32,6 +33,7 @@ export default function RootLayout({
         <ThemeProviderWrapper>
           <TooltipProvider>
             <AppShell>{children}</AppShell>
+            <Toaster position="top-right" richColors />
           </TooltipProvider>
         </ThemeProviderWrapper>
       </body>
