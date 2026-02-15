@@ -20,6 +20,7 @@ import { format } from "date-fns";
 import { CalendarIcon, Sparkles, Loader2, Save, Copy, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Lead } from "@/types/lead";
+import { toast } from "sonner";
 
 const formatStatus = (status: Lead["status"]) =>
   status
@@ -47,6 +48,7 @@ export default function LeadDetailPage() {
   const [isSettingReminder, setIsSettingReminder] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // use Sonner's toast for notifications
 
   useEffect(() => {
     if (!leadId) return;
@@ -76,26 +78,52 @@ export default function LeadDetailPage() {
     setError(null);
 
     try {
-      const res = await fetch("/api/ai/generate-proposal", {
+      const res = await fetch("/api/generate-proposal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           leadId: lead.id,
           jobTitle: lead.jobTitle,
-          jobDescription: notes || lead.notes || "",
-          description: notes || lead.notes || "",
+          description: lead.description,
           platform: lead.platform,
           clientName: lead.clientName,
         }),
       });
 
-      if (!res.ok) throw new Error("Failed to generate proposal");
+      if (!res.ok) throw new Error("Failed to generate");
       const { proposal: generated } = await res.json();
       setProposal(generated);
+
+      // Optional: auto-save proposal and update status
+      await handleAutoSaveProposalAndStatus(generated);
     } catch (err) {
-      setError("AI generation failed. Try again.");
+      setError("Failed to generate proposal.");
+      toast.error("Failed to generate proposal");
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleAutoSaveProposalAndStatus = async (generatedProposal: string) => {
+    if (!lead) return;
+
+    const res = await fetch(`/api/leads/${lead.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        proposal: generatedProposal,
+        status: "proposal-sent", 
+      }),
+    });
+
+    if (res.ok) {
+      const updated = await res.json();
+      setLead(updated);
+      setProposal(updated.proposal || "");
+      setStatus(updated.status);
+      toast.success("Proposal saved", { description: "Saved to the lead." });
+    } else {
+      toast.error("Failed to save proposal");
     }
   };
 
@@ -106,16 +134,52 @@ export default function LeadDetailPage() {
     const res = await fetch(`/api/leads/${lead.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ proposal }),
+      body: JSON.stringify({
+        proposal,
+        status: proposal.trim() ? "proposal-sent" : status, // only update if there's content
+      }),
     });
 
     if (res.ok) {
       const updated = await res.json();
       setLead(updated);
       setProposal(updated.proposal || "");
+      setStatus(updated.status);
     }
 
     setIsSavingProposal(false);
+  };
+
+  const handleSetReminder = async () => {
+    if (!lead || !reminderDate) return;
+    setIsSettingReminder(true);
+
+    const reminderISO = reminderDate.toISOString();
+
+    const res = await fetch(`/api/reminders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        leadId: lead.id,
+        reminderDate: reminderISO,
+        type: "follow-up",
+      }),
+    });
+
+    if (res.ok) {
+      // Auto-update status when reminder is set
+      await fetch(`/api/leads/${lead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "follow-up-needed" }),
+      });
+      toast.success("Reminder set", { description: "We'll remind you to follow up." });
+      setReminderDate(undefined);
+    } else {
+      toast.error("Failed to set reminder");
+    }
+
+    setIsSettingReminder(false);
   };
 
   const handleSaveDetails = async () => {
@@ -138,6 +202,9 @@ export default function LeadDetailPage() {
       setClientName(data.clientName || "");
       setJobTitle(data.jobTitle || "");
       setPlatform(data.platform || "");
+      toast.success("Details updated", { description: "Lead details saved." });
+    } else {
+      toast.error("Failed to update details");
     }
 
     setIsSavingDetails(false);
@@ -157,35 +224,12 @@ export default function LeadDetailPage() {
       const data = await res.json();
       setLead(data);
       setNotes(data.notes || "");
+      toast.success("Notes saved");
+    } else {
+      toast.error("Failed to save notes");
     }
 
     setIsSavingNotes(false);
-  };
-
-  const handleSetReminder = async () => {
-    if (!lead || !reminderDate) return;
-    setIsSettingReminder(true);
-
-    // You can add time picker later; for now just date
-    const reminderISO = reminderDate.toISOString();
-
-    const res = await fetch(`/api/reminders`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        leadId: lead.id,
-        reminderDate: reminderISO,
-        type: "follow-up", // or "initial" etc.
-      }),
-    });
-
-    if (res.ok) {
-      // Optional: update local lead with reminder info
-      alert("Reminder set! (Implement email/cron in backend)");
-      setReminderDate(undefined);
-    }
-
-    setIsSettingReminder(false);
   };
 
   const handleArchiveLead = async () => {
@@ -199,25 +243,10 @@ export default function LeadDetailPage() {
       router.push("/leads");
     } else {
       setIsArchiving(false);
+      toast.error("Failed to archive lead");
     }
   };
 
-  const handleStatusChange = async (newStatus: Lead["status"]) => {
-    if (!lead) return;
-    setStatus(newStatus);
-
-    const res = await fetch(`/api/leads/${lead.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      setLead(data);
-      setStatus(data.status);
-    }
-  };
 
   if (error) return <p className="p-8 text-destructive">{error}</p>;
   if (!lead) return <p className="p-8 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></p>;
@@ -296,67 +325,7 @@ export default function LeadDetailPage() {
 
           {/* Sidebar Controls */}
           <div className="space-y-6">
-            {/* Lead Details */}
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle>Lead Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Client name (for personalization)</label>
-                  <Input value={clientName} onChange={(e) => setClientName(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Job title</label>
-                  <Input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Platform</label>
-                  <Select value={platform} onValueChange={setPlatform}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select platform" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Upwork">Upwork</SelectItem>
-                      <SelectItem value="Fiverr">Fiverr</SelectItem>
-                      <SelectItem value="LinkedIn">LinkedIn</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  onClick={handleSaveDetails}
-                  disabled={isSavingDetails || !jobTitle.trim()}
-                  className="w-full"
-                >
-                  {isSavingDetails ? "Saving..." : "Update Details"}
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Status */}
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle>Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Select value={status} onValueChange={handleStatusChange}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="new">New</SelectItem>
-                    <SelectItem value="proposal-sent">Proposal Sent</SelectItem>
-                    <SelectItem value="waiting-response">Waiting Response</SelectItem>
-                    <SelectItem value="follow-up-needed">Follow-up Needed</SelectItem>
-                    <SelectItem value="won">Won 🎉</SelectItem>
-                    <SelectItem value="lost">Lost</SelectItem>
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
-
-            {/* Reminder */}
+             {/* Reminder */}
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle>Follow-up Reminder</CardTitle>
@@ -417,6 +386,44 @@ export default function LeadDetailPage() {
                   className="w-full"
                 >
                   {isSavingNotes ? "Saving..." : "Save Notes"}
+                </Button>
+              </CardContent>
+            </Card>
+            
+            {/* Lead Details */}
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle>Lead Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Client name (for personalization)</label>
+                  <Input value={clientName} onChange={(e) => setClientName(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Job title</label>
+                  <Input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Platform</label>
+                  <Select value={platform} onValueChange={setPlatform}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select platform" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Upwork">Upwork</SelectItem>
+                      <SelectItem value="Fiverr">Fiverr</SelectItem>
+                      <SelectItem value="LinkedIn">LinkedIn</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  onClick={handleSaveDetails}
+                  disabled={isSavingDetails || !jobTitle.trim()}
+                  className="w-full"
+                >
+                  {isSavingDetails ? "Saving..." : "Update Details"}
                 </Button>
               </CardContent>
             </Card>
