@@ -54,8 +54,8 @@ export default function LeadsPage() {
             className="p-5 cursor-pointer hover:shadow-md transition"
             onClick={() => (window.location.href = `/leads/${lead.id}`)}
           >
-            <p className="font-medium">{lead.jobTitle}</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="font-medium text-sm">{lead.jobTitle}</p>
+            <p className="text-sm text-muted-foreground mt-1">
               {lead.platform || "—"}
             </p>
             <p className="text-xs mt-2 text-primary">
