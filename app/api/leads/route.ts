@@ -18,6 +18,11 @@ type LeadRecord = {
 	updatedAt: string;
 };
 
+type ReminderRecord = {
+	leadId: string;
+	reminderAt: string;
+};
+
 
 const normalizeText = (value: unknown) =>
 	typeof value === "string" ? value.trim() : "";
@@ -134,7 +139,42 @@ export async function GET() {
 		);
 	}
 
-	return NextResponse.json((data as LeadRecord[]).map(toLeadResponse));
+	const leads = (data as LeadRecord[]) ?? [];
+	const leadIds = leads.map((lead) => lead.id);
+	const remindersByLead = new Map<string, string>();
+
+	if (leadIds.length > 0) {
+		const { data: reminders, error: remindersError } = await supabase
+			.from("reminders")
+			.select("leadId, reminderAt")
+			.eq("userId", userId)
+			.eq("sent", false)
+			.in("leadId", leadIds)
+			.order("reminderAt", { ascending: true });
+
+		if (remindersError) {
+			return NextResponse.json(
+				{
+					error: "Failed to load reminders",
+					detail: remindersError.message,
+				},
+				{ status: 500 }
+			);
+		}
+
+		for (const reminder of (reminders as ReminderRecord[]) ?? []) {
+			if (!remindersByLead.has(reminder.leadId)) {
+				remindersByLead.set(reminder.leadId, reminder.reminderAt);
+			}
+		}
+	}
+
+	const response = leads.map((lead) => ({
+		...toLeadResponse(lead),
+		nextReminderAt: remindersByLead.get(lead.id) ?? null,
+	}));
+
+	return NextResponse.json(response);
 }
 
 export async function POST(request: Request) {
