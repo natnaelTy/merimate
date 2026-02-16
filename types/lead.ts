@@ -21,5 +21,6 @@ export type Lead = {
   updatedAt: string;
   proposal?: string;
   description?: string;
+  nextReminderAt?: string | null;
   reminders?: string[];
 };
