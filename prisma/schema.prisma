@@ -48,7 +48,7 @@ model Lead {
   status      LeadStatus  @default(NEW)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-
+  lastContact DateTime?
   reminders   Reminder[]
   messages    Message[]
 
