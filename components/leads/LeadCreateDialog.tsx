@@ -12,6 +12,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus } from "lucide-react";
 import type { Lead } from "@/types/lead";
 
@@ -96,11 +103,18 @@ export default function AddLeadDialog({
 
           <div>
             <Label className="mb-1">Platform</Label>
-            <Input
-              placeholder="Upwork / LinkedIn / Email"
-              value={platform}
-              onChange={(event) => setPlatform(event.target.value)}
-            />
+            <Select value={platform} onValueChange={setPlatform}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select platform" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Upwork">Upwork</SelectItem>
+                <SelectItem value="Fiverr">Fiverr</SelectItem>
+                <SelectItem value="LinkedIn">LinkedIn</SelectItem>
+                <SelectItem value="Email">Email</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
