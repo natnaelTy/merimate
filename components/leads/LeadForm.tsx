@@ -2,6 +2,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { LeadStatus } from "@/types/lead";
 
 const statuses: LeadStatus[] = [
@@ -54,12 +61,24 @@ export default function LeadForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="platform">Platform</Label>
-          <Input
+          <input
+            type="hidden"
             id="platform"
             name="platform"
             defaultValue={defaultValues?.platform ?? ""}
-            placeholder="Upwork, LinkedIn, email"
           />
+          <Select defaultValue={defaultValues?.platform ?? ""}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select platform" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Upwork">Upwork</SelectItem>
+              <SelectItem value="Fiverr">Fiverr</SelectItem>
+              <SelectItem value="LinkedIn">LinkedIn</SelectItem>
+              <SelectItem value="Email">Email</SelectItem>
+              <SelectItem value="Other">Other</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label htmlFor="status">Status</Label>
