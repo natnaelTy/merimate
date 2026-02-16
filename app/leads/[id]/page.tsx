@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -16,11 +16,22 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
-import { CalendarIcon, Sparkles, Loader2, Save, Copy, Archive } from "lucide-react";
+import { differenceInCalendarDays, format } from "date-fns";
+import { CalendarIcon, Sparkles, Loader2, Copy, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Lead } from "@/types/lead";
 import { toast } from "sonner";
+
+type Reminder = {
+  id: string;
+  leadId: string;
+  reminderAt: string;
+  sent: boolean;
+  type: string;
+  message: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
 
 const formatStatus = (status: Lead["status"]) =>
   status
@@ -41,36 +52,52 @@ export default function LeadDetailPage() {
   const [proposal, setProposal] = useState("");
   const [status, setStatus] = useState<Lead["status"]>("new");
   const [reminderDate, setReminderDate] = useState<Date | undefined>(undefined);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isSavingProposal, setIsSavingProposal] = useState(false);
   const [isSavingDetails, setIsSavingDetails] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [isSettingReminder, setIsSettingReminder] = useState(false);
+  const [isUpdatingReminder, setIsUpdatingReminder] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // use Sonner's toast for notifications
 
-  useEffect(() => {
+  const loadLead = useCallback(async () => {
     if (!leadId) return;
 
-    async function fetchLead() {
-      try {
-        const res = await fetch(`/api/leads/${leadId}`, { cache: "no-store" });
-        if (!res.ok) throw new Error("Failed to load lead");
-        const data = (await res.json()) as Lead;
-        setLead(data);
-        setClientName(data.clientName || "");
-        setJobTitle(data.jobTitle || "");
-        setPlatform(data.platform || "");
-        setNotes(data.notes || "");
-        setProposal(data.proposal || ""); // Assuming you added proposal field to Lead type
-        setStatus(data.status);
-      } catch (err) {
-        setError("Could not load lead details.");
-      }
+    try {
+      const res = await fetch(`/api/leads/${leadId}`, { cache: "no-store" });
+      if (!res.ok) throw new Error("Failed to load lead");
+      const data = (await res.json()) as Lead;
+      setLead(data);
+      setClientName(data.clientName || "");
+      setJobTitle(data.jobTitle || "");
+      setPlatform(data.platform || "");
+      setNotes(data.notes || "");
+      setProposal(data.proposal || "");
+      setStatus(data.status);
+    } catch (err) {
+      setError("Could not load lead details.");
     }
-    fetchLead();
   }, [leadId]);
+
+  const loadReminders = useCallback(async () => {
+    if (!leadId) return;
+    const res = await fetch(`/api/reminders?leadId=${leadId}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      return;
+    }
+    const data = (await res.json()) as Reminder[];
+    setReminders(data);
+  }, [leadId]);
+
+  useEffect(() => {
+    if (!leadId) return;
+    void loadLead();
+    void loadReminders();
+  }, [leadId, loadLead, loadReminders]);
 
   const handleGenerateProposal = async () => {
     if (!lead) return;
@@ -78,7 +105,7 @@ export default function LeadDetailPage() {
     setError(null);
 
     try {
-      const res = await fetch("/api/generate-proposal", {
+      const res = await fetch("/api/ai/generate-proposal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -112,7 +139,7 @@ export default function LeadDetailPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         proposal: generatedProposal,
-        status: "proposal-sent", 
+        status: "proposal",
       }),
     });
 
@@ -127,27 +154,14 @@ export default function LeadDetailPage() {
     }
   };
 
-  const handleSaveProposal = async () => {
-    if (!lead || !proposal.trim()) return;
-    setIsSavingProposal(true);
-
-    const res = await fetch(`/api/leads/${lead.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        proposal,
-        status: proposal.trim() ? "proposal-sent" : status, // only update if there's content
-      }),
-    });
-
-    if (res.ok) {
-      const updated = await res.json();
-      setLead(updated);
-      setProposal(updated.proposal || "");
-      setStatus(updated.status);
+  const handleCopyProposal = async () => {
+    if (!proposal.trim()) return;
+    try {
+      await navigator.clipboard.writeText(proposal);
+      toast.success("Copied to clipboard");
+    } catch (err) {
+      toast.error("Failed to copy");
     }
-
-    setIsSavingProposal(false);
   };
 
   const handleSetReminder = async () => {
@@ -171,15 +185,36 @@ export default function LeadDetailPage() {
       await fetch(`/api/leads/${lead.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "follow-up-needed" }),
+        body: JSON.stringify({ status: "follow-up" }),
       });
       toast.success("Reminder set", { description: "We'll remind you to follow up." });
       setReminderDate(undefined);
+      await loadReminders();
     } else {
       toast.error("Failed to set reminder");
     }
 
     setIsSettingReminder(false);
+  };
+
+  const handleMarkReminderSent = async (reminderId: string) => {
+    if (isUpdatingReminder) return;
+    setIsUpdatingReminder(true);
+
+    const res = await fetch(`/api/reminders/${reminderId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sent: true }),
+    });
+
+    if (res.ok) {
+      toast.success("Reminder marked as sent");
+      await loadReminders();
+    } else {
+      toast.error("Failed to update reminder");
+    }
+
+    setIsUpdatingReminder(false);
   };
 
   const handleSaveDetails = async () => {
@@ -247,6 +282,24 @@ export default function LeadDetailPage() {
     }
   };
 
+  const pendingReminders = reminders
+    .filter((reminder) => !reminder.sent)
+    .sort(
+      (a, b) =>
+        new Date(a.reminderAt).getTime() - new Date(b.reminderAt).getTime()
+    );
+
+  const getReminderBadge = (reminderAt: string) => {
+    const date = new Date(reminderAt);
+    if (Number.isNaN(date.getTime())) return null;
+    const diff = differenceInCalendarDays(date, new Date());
+
+    if (diff < 0) return { label: "Overdue", tone: "danger" as const };
+    if (diff === 0) return { label: "Due today", tone: "warning" as const };
+    if (diff === 1) return { label: "Due tomorrow", tone: "warning" as const };
+    return { label: "Upcoming", tone: "default" as const };
+  };
+
 
   if (error) return <p className="p-8 text-destructive">{error}</p>;
   if (!lead) return <p className="p-8 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></p>;
@@ -262,11 +315,11 @@ export default function LeadDetailPage() {
                 <h1 className="text-2xl font-bold tracking-tight">{lead.jobTitle || "Untitled Lead"}</h1>
                 <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                   <span className="font-medium">{lead.platform || "Unknown Platform"}</span>
-                  {lead.clientName && <span>• Client: {lead.clientName}</span>}
+                  {lead.clientName && <span> • Client: {lead.clientName}</span>}
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Badge variant="default" className="px-3 py-1 text-sm">
+                <Badge className="px-3 py-1 text-xs bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300">
                   {formatStatus(status)}
                 </Badge>
                 <Button variant="destructive" size="sm" onClick={handleArchiveLead} disabled={isArchiving}>
@@ -306,18 +359,11 @@ export default function LeadDetailPage() {
               />
               <div className="flex flex-wrap gap-3">
                 <Button
-                  onClick={() => navigator.clipboard.writeText(proposal)}
+                  onClick={handleCopyProposal}
                   disabled={!proposal.trim()}
                   variant="secondary"
                 >
                   <Copy className="h-4 w-4 mr-2" /> Copy
-                </Button>
-                <Button
-                  onClick={handleSaveProposal}
-                  disabled={isSavingProposal || !proposal.trim()}
-                >
-                  {isSavingProposal ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                  Save Proposal
                 </Button>
               </div>
             </CardContent>
@@ -365,6 +411,37 @@ export default function LeadDetailPage() {
                 <p className="text-xs text-muted-foreground">
                   We'll remind you to follow up (email coming soon).
                 </p>
+                {pendingReminders.length > 0 ? (
+                  <div className="rounded-md border border-border/60 bg-background/60 p-3 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Next reminder</span>
+                      {(() => {
+                        const badge = getReminderBadge(pendingReminders[0].reminderAt);
+                        return badge ? (
+                          <Badge variant={badge.tone} className="text-[10px]">
+                            {badge.label}
+                          </Badge>
+                        ) : null;
+                      })()}
+                    </div>
+                    <p className="mt-2 text-sm font-medium">
+                      {format(new Date(pendingReminders[0].reminderAt), "PPP")}
+                    </p>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="mt-3 w-full"
+                      disabled={isUpdatingReminder}
+                      onClick={() => handleMarkReminderSent(pendingReminders[0].id)}
+                    >
+                      {isUpdatingReminder ? "Updating..." : "Mark as sent"}
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    No upcoming reminders.
+                  </p>
+                )}
               </CardContent>
             </Card>
 
