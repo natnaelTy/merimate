@@ -12,6 +12,8 @@ type LeadRecord = {
 	status: DbLeadStatus;
 	lastContact: string | null;
 	notes: string | null;
+	description: string | null;
+	proposal: string | null;
 	createdAt: string;
 	updatedAt: string;
 };
@@ -59,6 +61,8 @@ const toLeadResponse = (lead: LeadRecord) => ({
 	status: dbToApiStatus[lead.status],
 	lastContact: lead.lastContact,
 	notes: lead.notes,
+	description: lead.description,
+	proposal: lead.proposal,
 	createdAt: lead.createdAt,
 	updatedAt: lead.updatedAt,
 });
@@ -95,7 +99,7 @@ export async function GET(
 
 	const { data, error } = await supabase
 		.from("leads")
-		.select("id, clientName, jobTitle, platform, status, lastContact, notes, createdAt, updatedAt")
+		.select("id, clientName, jobTitle, platform, status, lastContact, notes, description, proposal, createdAt, updatedAt")
 		.eq("id", leadId)
 		.eq("userId", userId)
 		.single();
@@ -132,6 +136,7 @@ export async function PATCH(
 		description?: unknown;
 		jobDescription?: unknown;
 		notes?: unknown;
+		proposal?: unknown;
 	};
 
 	try {
@@ -177,6 +182,10 @@ export async function PATCH(
 		patch.lastContact = emptyToNull(body.lastContact);
 	}
 
+	if (Object.prototype.hasOwnProperty.call(body, "proposal")) {
+		patch.proposal = emptyToNull(body.proposal);
+	}
+
 	const notesValue =
 		emptyToNull(body.notes) ??
 		emptyToNull(body.description) ??
@@ -200,7 +209,7 @@ export async function PATCH(
 		.update(patch)
 		.eq("id", leadId)
 		.eq("userId", userId)
-		.select("id, clientName, jobTitle, platform, status, lastContact, notes, createdAt, updatedAt")
+		.select("id, clientName, jobTitle, platform, status, lastContact, notes, description, proposal, createdAt, updatedAt")
 		.single();
 
 	if (error || !data) {
