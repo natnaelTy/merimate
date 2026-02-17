@@ -98,10 +98,10 @@ const data = {
     },
     {
       title: "Inbox",
-      url: "#",
+      url: "/follow-ups",
       icon: Inbox,
       items: [
-        { title: "Follow-ups", url: "#" },
+        { title: "Follow-ups", url: "/follow-ups" },
         { title: "Sequences", url: "#" },
       ],
     },
