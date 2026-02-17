@@ -15,9 +15,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { differenceInCalendarDays, format } from "date-fns";
-import { CalendarIcon, Sparkles, Loader2, Copy, Archive } from "lucide-react";
+import { CalendarIcon, Sparkles, Loader2, Copy, Archive, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Lead } from "@/types/lead";
 import { toast } from "sonner";
@@ -52,6 +57,12 @@ export default function LeadDetailPage() {
   const [proposal, setProposal] = useState("");
   const [status, setStatus] = useState<Lead["status"]>("new");
   const [reminderDate, setReminderDate] = useState<Date | undefined>(undefined);
+  const [clientMessage, setClientMessage] = useState("");
+  const [followUpDraft, setFollowUpDraft] = useState("");
+  const [isGeneratingFollowUp, setIsGeneratingFollowUp] = useState(false);
+  const [followUpError, setFollowUpError] = useState<string | null>(null);
+  const [messageSource, setMessageSource] = useState<"paste" | "notes">("paste");
+  const [isReplyOpen, setIsReplyOpen] = useState(false);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSavingDetails, setIsSavingDetails] = useState(false);
@@ -98,6 +109,15 @@ export default function LeadDetailPage() {
     void loadLead();
     void loadReminders();
   }, [leadId, loadLead, loadReminders]);
+
+  useEffect(() => {
+    if (followUpDraft.trim()) return;
+    const draft = reminders.find((reminder) => !reminder.sent && reminder.message)?.message;
+    if (draft) {
+      setFollowUpDraft(draft);
+      setIsReplyOpen(true);
+    }
+  }, [followUpDraft, reminders]);
 
   const handleGenerateProposal = async () => {
     if (!lead) return;
@@ -164,6 +184,60 @@ export default function LeadDetailPage() {
     }
   };
 
+  const handleGenerateFollowUp = async () => {
+    if (!lead) return;
+    const sourceMessage =
+      messageSource === "notes" ? lead.notes?.trim() || "" : clientMessage.trim();
+
+    if (!sourceMessage) {
+      toast.error(
+        messageSource === "notes"
+          ? "Add notes first or choose Paste message."
+          : "Paste the client message first."
+      );
+      return;
+    }
+    setIsGeneratingFollowUp(true);
+    setFollowUpError(null);
+
+    try {
+      const response = await fetch("/api/ai/followup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientName: lead.clientName,
+          jobTitle: lead.jobTitle,
+          lastMessage: sourceMessage,
+        }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || "Failed to generate follow-up");
+      }
+
+      const data = (await response.json()) as { message: string };
+      setFollowUpDraft(data.message);
+      setIsReplyOpen(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to generate follow-up.";
+      setFollowUpError(message);
+      toast.error(message);
+    } finally {
+      setIsGeneratingFollowUp(false);
+    }
+  };
+
+  const handleCopyFollowUp = async () => {
+    if (!followUpDraft.trim()) return;
+    try {
+      await navigator.clipboard.writeText(followUpDraft);
+      toast.success("Copied to clipboard");
+    } catch (err) {
+      toast.error("Failed to copy");
+    }
+  };
+
   const handleSetReminder = async () => {
     if (!lead || !reminderDate) return;
     setIsSettingReminder(true);
@@ -176,7 +250,6 @@ export default function LeadDetailPage() {
       body: JSON.stringify({
         leadId: lead.id,
         reminderDate: reminderISO,
-        type: "follow-up",
       }),
     });
 
@@ -300,6 +373,12 @@ export default function LeadDetailPage() {
     return { label: "Upcoming", tone: "default" as const };
   };
 
+  const formatFollowUpType = (type?: string | null) => {
+    if (!type || type === "follow-up") return "Follow-up";
+    if (type === "proposal-update") return "Proposal update";
+    return type.charAt(0).toUpperCase() + type.slice(1);
+  };
+
 
   if (error) return <p className="p-8 text-destructive">{error}</p>;
   if (!lead) return <p className="p-8 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></p>;
@@ -371,34 +450,37 @@ export default function LeadDetailPage() {
 
           {/* Sidebar Controls */}
           <div className="space-y-6">
-             {/* Reminder */}
+            {/* Follow-up */}
             <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle>Follow-up Reminder</CardTitle>
+                <CardTitle>Follow-Up</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !reminderDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {reminderDate ? format(reminderDate, "PPP") : "Pick a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={reminderDate}
-                      onSelect={setReminderDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Next follow-up date</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !reminderDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {reminderDate ? format(reminderDate, "PPP") : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={reminderDate}
+                        onSelect={setReminderDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
 
                 <Button
                   onClick={handleSetReminder}
@@ -406,15 +488,103 @@ export default function LeadDetailPage() {
                   className="w-full"
                 >
                   {isSettingReminder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Set Reminder
+                  Schedule Follow-Up
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  We'll remind you to follow up (email coming soon).
+                  We&apos;ll remind you to follow up (email coming soon).
                 </p>
+
+                <Collapsible
+                  open={isReplyOpen}
+                  onOpenChange={setIsReplyOpen}
+                  className="rounded-md border border-border/60 bg-background/60"
+                >
+                  <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium">
+                    <span>Generate reply to recent client message</span>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 transition-transform",
+                        isReplyOpen ? "rotate-180" : ""
+                      )}
+                    />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-3 px-3 pb-3">
+                    <p className="text-xs text-muted-foreground">
+                      Choose a source for the client&apos;s latest message.
+                    </p>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Message source
+                      </label>
+                      <Select
+                        value={messageSource}
+                        onValueChange={(value) =>
+                          setMessageSource(value as "paste" | "notes")
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Choose source" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="paste">Paste message</SelectItem>
+                          <SelectItem value="notes">Use lead notes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {messageSource === "paste" ? (
+                      <Textarea
+                        value={clientMessage}
+                        onChange={(event) => setClientMessage(event.target.value)}
+                        placeholder="Paste the client message here..."
+                        className="min-h-[120px]"
+                      />
+                    ) : (
+                      <div className="rounded-md border border-border/60 bg-background/80 p-3 text-xs text-muted-foreground">
+                        {lead?.notes?.trim()
+                          ? lead.notes
+                          : "No notes yet. Add notes on this lead or choose Paste message."}
+                      </div>
+                    )}
+                    <Button
+                      onClick={handleGenerateFollowUp}
+                      disabled={
+                        isGeneratingFollowUp ||
+                        (messageSource === "paste"
+                          ? !clientMessage.trim()
+                          : !(lead?.notes?.trim() || ""))
+                      }
+                      className="w-full"
+                    >
+                      {isGeneratingFollowUp ? "Generating..." : "Generate AI Response"}
+                    </Button>
+                    {followUpError ? (
+                      <p className="text-xs text-destructive">{followUpError}</p>
+                    ) : null}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">AI response</p>
+                      <Textarea
+                        value={followUpDraft}
+                        onChange={(event) => setFollowUpDraft(event.target.value)}
+                        placeholder="Your AI response will appear here..."
+                        className="min-h-[140px]"
+                      />
+                      <Button
+                        variant="secondary"
+                        onClick={handleCopyFollowUp}
+                        disabled={!followUpDraft.trim()}
+                        className="w-full"
+                      >
+                        <Copy className="mr-2 h-4 w-4" /> Copy response
+                      </Button>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
                 {pendingReminders.length > 0 ? (
                   <div className="rounded-md border border-border/60 bg-background/60 p-3 text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Next reminder</span>
+                      <span className="text-muted-foreground">Next follow-up</span>
                       {(() => {
                         const badge = getReminderBadge(pendingReminders[0].reminderAt);
                         return badge ? (
@@ -427,6 +597,9 @@ export default function LeadDetailPage() {
                     <p className="mt-2 text-sm font-medium">
                       {format(new Date(pendingReminders[0].reminderAt), "PPP")}
                     </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatFollowUpType(pendingReminders[0].type)}
+                    </p>
                     <Button
                       variant="secondary"
                       size="sm"
@@ -434,12 +607,12 @@ export default function LeadDetailPage() {
                       disabled={isUpdatingReminder}
                       onClick={() => handleMarkReminderSent(pendingReminders[0].id)}
                     >
-                      {isUpdatingReminder ? "Updating..." : "Mark as sent"}
+                      {isUpdatingReminder ? "Updating..." : "Mark as done"}
                     </Button>
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    No upcoming reminders.
+                    No upcoming follow-ups.
                   </p>
                 )}
               </CardContent>
