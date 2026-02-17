@@ -21,17 +21,26 @@ import {
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isApp =
-    pathname.startsWith("/dashboard") || pathname.startsWith("/leads");
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/leads") ||
+    pathname.startsWith("/follow-ups");
 
   if (!isApp) {
     return <>{children}</>;
   }
 
+  const isFollowUps = pathname.startsWith("/follow-ups");
   const isLeads = pathname.startsWith("/leads");
-  const rootLabel = isLeads ? "Leads" : "Dashboard";
-  const rootHref = isLeads ? "/leads" : "/dashboard";
+  const rootLabel = isLeads ? "Leads" : isFollowUps ? "Inbox" : "Dashboard";
+  const rootHref = isLeads ? "/leads" : isFollowUps ? "/follow-ups" : "/dashboard";
   const hasDetail = isLeads && pathname.split("/").filter(Boolean).length > 1;
-  const pageLabel = isLeads ? (hasDetail ? "Lead details" : "All leads") : "Overview";
+  const pageLabel = isLeads
+    ? hasDetail
+      ? "Lead details"
+      : "All leads"
+    : isFollowUps
+      ? "Follow-ups"
+      : "Overview";
 
   return (
     <SidebarProvider>
