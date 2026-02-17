@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
+import Groq from "groq-sdk";
 import { createServerSupabase } from "@/lib/supabase/server";
+
+const groqApiKey = process.env.GROQ_API_KEY || "";
+const groq = new Groq({ apiKey: groqApiKey });
 
 export async function POST(request: Request) {
   const supabase = await createServerSupabase();
@@ -24,24 +28,17 @@ export async function POST(request: Request) {
     );
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  if (!groqApiKey) {
     return NextResponse.json(
-      { error: "Missing OPENAI_API_KEY" },
+      { error: "Missing GROQ_API_KEY" },
       { status: 500 }
     );
   }
 
-  const baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com";
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const model = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
 
-  const response = await fetch(`${baseUrl}/v1/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+  try {
+    const completion = await groq.chat.completions.create({
       model,
       temperature: 0.6,
       max_tokens: 220,
@@ -49,30 +46,23 @@ export async function POST(request: Request) {
         {
           role: "system",
           content:
-            "You are an expert freelancer assistant. Write concise, friendly follow-up messages. Keep it under 120 words.",
+            "You are an expert freelancer assistant. Write concise, friendly follow-up messages. Keep it under 100 words.",
         },
         {
           role: "user",
           content: `Client: ${clientName}\nRole: ${jobTitle}\nLast message: ${lastMessage || "None"}\nWrite a follow-up message that is warm, confident, and offers a clear next step.`,
         },
       ],
-    }),
-  });
+    });
 
-  if (!response.ok) {
-    const errorText = await response.text();
+    const message = completion.choices[0]?.message?.content || "";
+
+    return NextResponse.json({ message: message.trim() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "AI error";
     return NextResponse.json(
-      { error: "AI request failed", detail: errorText },
+      { error: "AI request failed", detail: message },
       { status: 500 }
     );
   }
-
-  const data = (await response.json()) as {
-    choices?: Array<{ message?: { content?: string }; text?: string }>;
-  };
-
-  const message =
-    data.choices?.[0]?.message?.content || data.choices?.[0]?.text || "";
-
-  return NextResponse.json({ message: message.trim() });
 }
