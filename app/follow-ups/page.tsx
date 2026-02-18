@@ -4,6 +4,7 @@ import { differenceInCalendarDays } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import FollowUpDraft from "@/components/followups/FollowUpDraft";
+import { ensureDraftForReminder } from "@/app/follow-ups/actions";
 import { createServerSupabaseReadOnly } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
 import { leadStatuses, type LeadStatus } from "@/types/lead";
@@ -20,6 +21,7 @@ type LeadRecord = {
   clientName: string | null;
   jobTitle: string | null;
   platform: string | null;
+  notes: string | null;
   status: string;
 };
 
@@ -153,7 +155,7 @@ export default async function FollowUpsPage() {
   if (leadIds.length > 0) {
     const { data: leads } = await supabase
       .from("leads")
-      .select("id, clientName, jobTitle, platform, status")
+      .select("id, clientName, jobTitle, platform, status, notes")
       .eq("userId", user.id)
       .in("id", leadIds);
 
@@ -162,24 +164,45 @@ export default async function FollowUpsPage() {
 
   const leadsById = new Map(leadRows.map((lead) => [lead.id, lead]));
 
-  const followUps = Array.from(remindersByLead.values())
-    .map((reminder) => {
-      const lead = leadsById.get(reminder.leadId);
-      if (!lead) return null;
-      return {
-        id: reminder.id,
-        leadId: reminder.leadId,
-        reminderAt: reminder.reminderAt,
-        message: reminder.message ?? null,
-        clientName: lead.clientName ?? "Unknown client",
-        jobTitle: lead.jobTitle ?? "Untitled role",
-        platform: lead.platform ?? "—",
-        status: normalizeStatus(lead.status),
-      } satisfies FollowUpRow;
-    })
-    .filter(Boolean) as FollowUpRow[];
-
   const now = new Date();
+
+  const followUps = (
+    await Promise.all(
+      Array.from(remindersByLead.values()).map(async (reminder) => {
+        const lead = leadsById.get(reminder.leadId);
+        if (!lead) return null;
+
+        let message = reminder.message ?? null;
+        const diff = differenceInCalendarDays(new Date(reminder.reminderAt), now);
+
+        if (!message && diff <= 0) {
+          try {
+            message = await ensureDraftForReminder({
+              reminderId: reminder.id,
+              userId: user.id,
+              reminderAt: reminder.reminderAt,
+              clientName: lead.clientName ?? "Unknown client",
+              jobTitle: lead.jobTitle ?? "Untitled role",
+              lastMessage: lead.notes ?? "",
+            });
+          } catch {
+            message = null;
+          }
+        }
+
+        return {
+          id: reminder.id,
+          leadId: reminder.leadId,
+          reminderAt: reminder.reminderAt,
+          message,
+          clientName: lead.clientName ?? "Unknown client",
+          jobTitle: lead.jobTitle ?? "Untitled role",
+          platform: lead.platform ?? "—",
+          status: normalizeStatus(lead.status),
+        } satisfies FollowUpRow;
+      })
+    )
+  ).filter(Boolean) as FollowUpRow[];
   const overdue: FollowUpRow[] = [];
   const today: FollowUpRow[] = [];
   const upcoming: FollowUpRow[] = [];
