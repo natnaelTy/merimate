@@ -1,6 +1,7 @@
 "use server";
 
 import Groq from "groq-sdk";
+import { differenceInCalendarDays } from "date-fns";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 
 const groqApiKey = process.env.GROQ_API_KEY || "";
@@ -42,8 +43,11 @@ export async function ensureDraftForReminder({
   if (!reminder || reminder.sent) return null;
   if (reminder.message) return reminder.message;
 
-  const nowIso = new Date().toISOString();
-  if (reminder.reminderAt > nowIso) return null;
+  const diff = differenceInCalendarDays(
+    new Date(reminder.reminderAt),
+    new Date()
+  );
+  if (diff > 0) return null;
 
   const model = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
   const completion = await groq.chat.completions.create({
