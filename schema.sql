@@ -3,6 +3,8 @@
 
 -- Ensure API roles can use the public schema.
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT CREATE ON SCHEMA public TO service_role;
+ALTER ROLE service_role SET search_path = public;
 
 -- Table privileges.
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
