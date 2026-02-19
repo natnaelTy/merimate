@@ -73,8 +73,15 @@ const generateFollowUpDraft = async ({
 
 export async function GET(request: Request) {
   try {
-    const authError = requireCronAuth(request);
-    if (authError) return authError;
+    const missingEnv: string[] = [];
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) missingEnv.push("NEXT_PUBLIC_SUPABASE_URL");
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) missingEnv.push("SUPABASE_SERVICE_ROLE_KEY");
+    if (missingEnv.length > 0) {
+      return NextResponse.json(
+        { error: "Missing environment variables", missingEnv },
+        { status: 500 }
+      );
+    }
 
     const supabase = createAdminSupabase();
     const now = new Date().toISOString();
