@@ -1,0 +1,92 @@
+// prisma/schema.prisma
+// learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ENUMS
+
+enum LeadStatus {
+  NEW
+  PROPOSAL
+  WAITING
+  FOLLOW_UP
+  WON
+  LOST
+}
+
+// MODELS
+
+model User {
+  id        String   @id @db.Uuid
+  email     String   @unique
+  createdAt DateTime @default(now())
+
+  leads    Lead[]
+  messages Message[]
+
+  @@map("users")
+}
+
+model Lead {
+  id          String     @id @default(uuid()) @db.Uuid
+  userId      String     @db.Uuid
+  jobTitle    String?
+  description String?
+  platform    String?
+  clientName  String?
+  proposal    String?
+  notes       String?
+  status      LeadStatus @default(NEW)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  lastContact DateTime?
+  reminders   Reminder[]
+  messages    Message[]
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("leads")
+}
+
+model Message {
+  id        String   @id @default(uuid()) @db.Uuid
+  leadId    String   @db.Uuid
+  userId    String   @db.Uuid
+  prompt    String
+  response  String
+  createdAt DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt(sort: Desc)])
+  @@map("messages")
+}
+
+model Reminder {
+  id         String   @id @default(uuid()) @db.Uuid
+  leadId     String   @db.Uuid
+  userId     String   @db.Uuid
+  reminderAt DateTime
+  type       String   @default("follow-up")
+  message    String?
+  sent       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([userId, reminderAt])
+  @@index([leadId])
+  @@index([sent, reminderAt])
+  @@map("reminders")
+}
