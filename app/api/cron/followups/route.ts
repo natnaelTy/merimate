@@ -165,7 +165,7 @@ export async function GET(request: Request) {
 
         await prisma.$executeRaw(Prisma.sql`
           UPDATE "reminders"
-          SET "message" = ${draft}, "sent" = true, "updatedAt" = ${new Date()}
+          SET "message" = ${draft}, "updatedAt" = ${new Date()}
           WHERE "id" = ${reminder.id}
         `);
 
