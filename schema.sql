@@ -2,19 +2,19 @@
 -- Run after the tables are created (e.g., after Prisma migrations).
 
 -- Ensure API roles can use the public schema.
-GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 
 -- Table privileges.
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
 
 -- Sequence privileges (for any serial/identity sequences).
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
 
 -- Default privileges for future tables/sequences.
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO anon, authenticated;
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-  GRANT USAGE, SELECT ON SEQUENCES TO anon, authenticated;
+  GRANT USAGE, SELECT ON SEQUENCES TO anon, authenticated, service_role;
 
 -- Enable RLS.
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
