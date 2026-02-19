@@ -381,7 +381,7 @@ export default function LeadDetailPage() {
 
 
   if (error) return <p className="p-8 text-destructive">{error}</p>;
-  if (!lead) return <p className="p-8 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></p>;
+  if (!lead) return <p className="p-8 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></p>
 
   return (
     <div className="min-h-screen">
@@ -597,6 +597,11 @@ export default function LeadDetailPage() {
                     <p className="mt-2 text-sm font-medium">
                       {format(new Date(pendingReminders[0].reminderAt), "PPP")}
                     </p>
+                    {pendingReminders[0].message ? (
+                      <p className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap">
+                        {pendingReminders[0].message}
+                      </p>
+                    ) : null}
                     <p className="text-xs text-muted-foreground">
                       {formatFollowUpType(pendingReminders[0].type)}
                     </p>
