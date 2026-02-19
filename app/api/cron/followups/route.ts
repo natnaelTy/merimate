@@ -1,17 +1,21 @@
 import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
-import { createAdminSupabase } from "@/lib/supabase/admin";
+import { Prisma, PrismaClient } from "@/app/generated/prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
 type ReminderRow = {
   id: string;
   leadId: string;
   userId: string;
-  reminderAt: string;
+  reminderAt: Date;
   message: string | null;
+  sent: boolean;
 };
 
 type LeadRow = {
   id: string;
+  userId: string;
   clientName: string | null;
   jobTitle: string | null;
   notes: string | null;
@@ -72,57 +76,55 @@ const generateFollowUpDraft = async ({
 };
 
 export async function GET(request: Request) {
+  let prisma: PrismaClient | null = null;
+  let pool: Pool | null = null;
   try {
-    const missingEnv: string[] = [];
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) missingEnv.push("NEXT_PUBLIC_SUPABASE_URL");
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) missingEnv.push("SUPABASE_SERVICE_ROLE_KEY");
-    if (missingEnv.length > 0) {
+    if (!process.env.DATABASE_URL) {
       return NextResponse.json(
-        { error: "Missing environment variables", missingEnv },
+        { error: "Missing environment variables", missingEnv: ["DATABASE_URL"] },
         { status: 500 }
       );
     }
 
-    const supabase = createAdminSupabase();
-    const now = new Date().toISOString();
+    pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const adapter = new PrismaPg(pool);
+    prisma = new PrismaClient({ adapter });
+    const now = new Date();
 
-    const { data: reminderRows, error: reminderError } = await supabase
-      .from("reminders")
-      .select("id, leadId, userId, reminderAt, message")
-      .eq("sent", false)
-      .lte("reminderAt", now)
-      .is("message", null)
-      .order("reminderAt", { ascending: true })
-      .limit(MAX_PER_RUN);
-
-    if (reminderError) {
-      return NextResponse.json(
-        { error: "Failed to load reminders", detail: reminderError.message },
-        { status: 500 }
-      );
-    }
-
-    const reminders = (reminderRows as ReminderRow[]) ?? [];
+    const reminders = await prisma.$queryRaw<ReminderRow[]>(Prisma.sql`
+      SELECT
+        "id",
+        "leadId",
+        "userId",
+        "reminderAt",
+        "message",
+        "sent"
+      FROM "reminders"
+      WHERE "sent" = false
+        AND "reminderAt" <= ${now}
+        AND "message" IS NULL
+      ORDER BY "reminderAt" ASC
+      LIMIT ${MAX_PER_RUN}
+    `);
     if (reminders.length === 0) {
       return NextResponse.json({ processed: 0 });
     }
 
     const leadIds = reminders.map((reminder) => reminder.leadId);
-    const { data: leadRows, error: leadError } = await supabase
-      .from("leads")
-      .select("id, clientName, jobTitle, notes")
-      .in("id", leadIds);
+    const leadRows = leadIds.length
+      ? await prisma.$queryRaw<LeadRow[]>(Prisma.sql`
+          SELECT
+            "id",
+            "userId",
+            "clientName",
+            "jobTitle",
+            "notes"
+          FROM "leads"
+          WHERE "id" IN (${Prisma.join(leadIds)})
+        `)
+      : [];
 
-    if (leadError) {
-      return NextResponse.json(
-        { error: "Failed to load leads", detail: leadError.message },
-        { status: 500 }
-      );
-    }
-
-    const leadsById = new Map(
-      ((leadRows as LeadRow[]) ?? []).map((lead) => [lead.id, lead])
-    );
+    const leadsById = new Map(leadRows.map((lead) => [lead.id, lead]));
 
     let processed = 0;
     const failures: Array<{ reminderId: string; error: string }> = [];
@@ -146,32 +148,26 @@ export async function GET(request: Request) {
           "AUTO_DRAFT_FOLLOWUP",
           `Reminder: ${reminder.id}`,
           `Lead: ${reminder.leadId}`,
-          `Due: ${reminder.reminderAt}`,
+          `Due: ${reminder.reminderAt.toISOString()}`,
           `Client: ${lead.clientName || "Unknown client"}`,
           `Role: ${lead.jobTitle || "Untitled role"}`,
           `Last message: ${lead.notes || "None"}`,
         ].join("\n");
 
-        const { error: messageError } = await supabase.from("messages").insert({
-          id: crypto.randomUUID(),
-          leadId: reminder.leadId,
-          userId: reminder.userId,
-          prompt,
-          response: draft,
+        await prisma.message.create({
+          data: {
+            leadId: reminder.leadId,
+            userId: lead.userId,
+            prompt,
+            response: draft,
+          },
         });
 
-        if (messageError) {
-          throw new Error(messageError.message);
-        }
-
-        const { error: updateError } = await supabase
-          .from("reminders")
-          .update({ message: draft, updatedAt: new Date().toISOString() })
-          .eq("id", reminder.id);
-
-        if (updateError) {
-          throw new Error(updateError.message);
-        }
+        await prisma.$executeRaw(Prisma.sql`
+          UPDATE "reminders"
+          SET "message" = ${draft}, "sent" = true, "updatedAt" = ${new Date()}
+          WHERE "id" = ${reminder.id}
+        `);
 
         processed += 1;
       } catch (error) {
@@ -191,5 +187,12 @@ export async function GET(request: Request) {
       },
       { status: 500 }
     );
+  } finally {
+    if (prisma) {
+      await prisma.$disconnect();
+    }
+    if (pool) {
+      await pool.end();
+    }
   }
 }
