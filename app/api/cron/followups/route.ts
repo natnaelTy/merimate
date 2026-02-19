@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
-import { Prisma, PrismaClient } from "@/app/generated/prisma";
+import { Prisma, PrismaClient } from "../../../generated/prisma";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
