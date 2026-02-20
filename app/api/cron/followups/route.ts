@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
+import { format } from "date-fns";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
+import { sendReminderEmail } from "@/lib/email";
 
 type ReminderRow = {
   id: string;
@@ -11,6 +13,7 @@ type ReminderRow = {
   reminderAt: Date;
   message: string | null;
   sent: boolean;
+  emailSentAt: Date | null;
 };
 
 type LeadRow = {
@@ -19,6 +22,11 @@ type LeadRow = {
   clientName: string | null;
   jobTitle: string | null;
   notes: string | null;
+};
+
+type UserRow = {
+  id: string;
+  email: string | null;
 };
 
 const MAX_PER_RUN = 25;
@@ -98,11 +106,12 @@ export async function GET(request: Request) {
         "userId",
         "reminderAt",
         "message",
-        "sent"
+        "sent",
+        "emailSentAt"
       FROM "reminders"
       WHERE "sent" = false
         AND "reminderAt" <= ${now}
-        AND "message" IS NULL
+        AND "emailSentAt" IS NULL
       ORDER BY "reminderAt" ASC
       LIMIT ${MAX_PER_RUN}
     `);
@@ -111,6 +120,7 @@ export async function GET(request: Request) {
     }
 
     const leadIds = reminders.map((reminder) => reminder.leadId);
+    const userIds = Array.from(new Set(reminders.map((reminder) => reminder.userId)));
     const leadRows = leadIds.length
       ? await prisma.$queryRaw<LeadRow[]>(Prisma.sql`
           SELECT
@@ -125,47 +135,104 @@ export async function GET(request: Request) {
       : [];
 
     const leadsById = new Map(leadRows.map((lead) => [lead.id, lead]));
+    const userRows = userIds.length
+      ? await prisma.$queryRaw<UserRow[]>(Prisma.sql`
+          SELECT
+            "id",
+            "email"
+          FROM "users"
+          WHERE "id" IN (${Prisma.join(userIds)})
+        `)
+      : [];
+    const usersById = new Map(userRows.map((user) => [user.id, user]));
 
     let processed = 0;
     const failures: Array<{ reminderId: string; error: string }> = [];
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
 
     for (const reminder of reminders) {
       const lead = leadsById.get(reminder.leadId);
       if (!lead) continue;
 
-      try {
-        const draft = await generateFollowUpDraft({
-          clientName: lead.clientName || "Unknown client",
-          jobTitle: lead.jobTitle || "Untitled role",
-          lastMessage: lead.notes || "",
+      const user = usersById.get(reminder.userId);
+      if (!user?.email) {
+        failures.push({
+          reminderId: reminder.id,
+          error: "Missing user email",
         });
+        continue;
+      }
+
+      try {
+        let draft = reminder.message;
 
         if (!draft) {
-          throw new Error("Empty draft");
+          try {
+            const generatedDraft = await generateFollowUpDraft({
+              clientName: lead.clientName || "Unknown client",
+              jobTitle: lead.jobTitle || "Untitled role",
+              lastMessage: lead.notes || "",
+            });
+
+            if (generatedDraft) {
+              const prompt = [
+                "AUTO_DRAFT_FOLLOWUP",
+                `Reminder: ${reminder.id}`,
+                `Lead: ${reminder.leadId}`,
+                `Due: ${reminder.reminderAt.toISOString()}`,
+                `Client: ${lead.clientName || "Unknown client"}`,
+                `Role: ${lead.jobTitle || "Untitled role"}`,
+                `Last message: ${lead.notes || "None"}`,
+              ].join("\n");
+
+              await prisma.message.create({
+                data: {
+                  leadId: reminder.leadId,
+                  userId: lead.userId,
+                  prompt,
+                  response: generatedDraft,
+                },
+              });
+
+              await prisma.$executeRaw(Prisma.sql`
+                UPDATE "reminders"
+                SET "message" = ${generatedDraft}, "updatedAt" = ${new Date()}
+                WHERE "id" = ${reminder.id}
+              `);
+
+              draft = generatedDraft;
+            }
+          } catch {
+            draft = null;
+          }
         }
 
-        const prompt = [
-          "AUTO_DRAFT_FOLLOWUP",
-          `Reminder: ${reminder.id}`,
-          `Lead: ${reminder.leadId}`,
-          `Due: ${reminder.reminderAt.toISOString()}`,
-          `Client: ${lead.clientName || "Unknown client"}`,
-          `Role: ${lead.jobTitle || "Untitled role"}`,
-          `Last message: ${lead.notes || "None"}`,
-        ].join("\n");
+        const dueLabel = format(reminder.reminderAt, "PPP");
+        const leadLabel = [lead.clientName, lead.jobTitle].filter(Boolean).join(" - ");
+        const subject = leadLabel
+          ? `Follow-up due: ${leadLabel}`
+          : "Follow-up due";
+        const lines = [
+          "A follow-up is due.",
+          lead.clientName ? `Client: ${lead.clientName}` : null,
+          lead.jobTitle ? `Role: ${lead.jobTitle}` : null,
+          `Due date: ${dueLabel}`,
+          siteUrl ? `Open lead: ${siteUrl}/leads/${reminder.leadId}` : null,
+          draft ? `Draft message:\n${draft}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n");
 
-        await prisma.message.create({
-          data: {
-            leadId: reminder.leadId,
-            userId: lead.userId,
-            prompt,
-            response: draft,
-          },
+        await sendReminderEmail({
+          to: user.email,
+          subject,
+          text: lines,
         });
 
+        const sentAt = new Date();
         await prisma.$executeRaw(Prisma.sql`
           UPDATE "reminders"
-          SET "message" = ${draft}, "updatedAt" = ${new Date()}
+          SET "emailSentAt" = ${sentAt}, "updatedAt" = ${sentAt}
           WHERE "id" = ${reminder.id}
         `);
 
