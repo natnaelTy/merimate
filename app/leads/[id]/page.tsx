@@ -55,18 +55,24 @@ export default function LeadDetailPage() {
   const [platform, setPlatform] = useState("");
   const [notes, setNotes] = useState("");
   const [proposal, setProposal] = useState("");
+  const [isProposalOpen, setIsProposalOpen] = useState(false);
+  const [hasCopiedProposal, setHasCopiedProposal] = useState(false);
   const [status, setStatus] = useState<Lead["status"]>("new");
   const [reminderDate, setReminderDate] = useState<Date | undefined>(undefined);
   const [clientMessage, setClientMessage] = useState("");
-  const [followUpDraft, setFollowUpDraft] = useState("");
   const [isGeneratingFollowUp, setIsGeneratingFollowUp] = useState(false);
   const [followUpError, setFollowUpError] = useState<string | null>(null);
-  const [messageSource, setMessageSource] = useState<"paste" | "notes">("paste");
-  const [isReplyOpen, setIsReplyOpen] = useState(false);
+  const [aiReply, setAiReply] = useState("");
+  const [draftReply, setDraftReply] = useState("");
+  const [polishedReply, setPolishedReply] = useState("");
+  const [isPolishingReply, setIsPolishingReply] = useState(false);
+  const [polishError, setPolishError] = useState<string | null>(null);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [hasShownDueToast, setHasShownDueToast] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSavingDetails, setIsSavingDetails] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isSettingReminder, setIsSettingReminder] = useState(false);
   const [isUpdatingReminder, setIsUpdatingReminder] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
@@ -111,18 +117,46 @@ export default function LeadDetailPage() {
   }, [leadId, loadLead, loadReminders]);
 
   useEffect(() => {
-    if (followUpDraft.trim()) return;
-    const draft = reminders.find((reminder) => !reminder.sent && reminder.message)?.message;
-    if (draft) {
-      setFollowUpDraft(draft);
-      setIsReplyOpen(true);
-    }
-  }, [followUpDraft, reminders]);
+    setHasShownDueToast(false);
+  }, [leadId]);
+
+  useEffect(() => {
+    if (hasShownDueToast) return;
+    if (reminders.length === 0) return;
+
+    const now = new Date();
+    const dueReminders = reminders
+      .filter((reminder) => !reminder.sent)
+      .map((reminder) => ({
+        reminder,
+        date: new Date(reminder.reminderAt),
+      }))
+      .filter(({ date }) => !Number.isNaN(date.getTime()))
+      .filter(
+        ({ date }) => differenceInCalendarDays(date, now) <= 0
+      )
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    if (dueReminders.length === 0) return;
+
+    const nextDue = dueReminders[0]?.date;
+    const description =
+      dueReminders.length === 1
+        ? `Follow-up due ${nextDue ? format(nextDue, "PPP") : "now"}.`
+        : `${dueReminders.length} follow-ups due. Next: ${
+            nextDue ? format(nextDue, "PPP") : "now"
+          }.`;
+
+    toast.warning("Follow-up due", { description });
+    setHasShownDueToast(true);
+  }, [hasShownDueToast, reminders]);
 
   const handleGenerateProposal = async () => {
     if (!lead) return;
     setIsGenerating(true);
     setError(null);
+    setIsProposalOpen(true);
+    setHasCopiedProposal(false);
 
     try {
       const res = await fetch("/api/ai/generate-proposal", {
@@ -179,6 +213,8 @@ export default function LeadDetailPage() {
     try {
       await navigator.clipboard.writeText(proposal);
       toast.success("Copied to clipboard");
+      setHasCopiedProposal(true);
+      setIsProposalOpen(false);
     } catch (err) {
       toast.error("Failed to copy");
     }
@@ -186,41 +222,35 @@ export default function LeadDetailPage() {
 
   const handleGenerateFollowUp = async () => {
     if (!lead) return;
-    const sourceMessage =
-      messageSource === "notes" ? lead.notes?.trim() || "" : clientMessage.trim();
+    const sourceMessage = clientMessage.trim();
 
     if (!sourceMessage) {
-      toast.error(
-        messageSource === "notes"
-          ? "Add notes first or choose Paste message."
-          : "Paste the client message first."
-      );
+      toast.error("Paste the client message first.");
       return;
     }
     setIsGeneratingFollowUp(true);
     setFollowUpError(null);
 
     try {
-      const response = await fetch("/api/ai/followup", {
+      const response = await fetch("/api/ai/generate-reply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           clientName: lead.clientName,
           jobTitle: lead.jobTitle,
-          lastMessage: sourceMessage,
+          message: sourceMessage,
         }),
       });
 
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
-        throw new Error(body.error || "Failed to generate follow-up");
+        throw new Error(body.error || "Failed to generate reply");
       }
 
       const data = (await response.json()) as { message: string };
-      setFollowUpDraft(data.message);
-      setIsReplyOpen(true);
+      setAiReply(data.message);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to generate follow-up.";
+      const message = err instanceof Error ? err.message : "Failed to generate reply.";
       setFollowUpError(message);
       toast.error(message);
     } finally {
@@ -228,14 +258,83 @@ export default function LeadDetailPage() {
     }
   };
 
-  const handleCopyFollowUp = async () => {
-    if (!followUpDraft.trim()) return;
+  const handlePolishReply = async () => {
+    if (!draftReply.trim()) {
+      toast.error("Write a response first");
+      return;
+    }
+    setIsPolishingReply(true);
+    setPolishError(null);
+
     try {
-      await navigator.clipboard.writeText(followUpDraft);
-      toast.success("Copied to clipboard");
+      const response = await fetch("/api/ai/polish-reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: draftReply.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || "Failed to fix grammar");
+      }
+
+      const data = (await response.json()) as { output?: string };
+      const output = data.output?.trim() || "";
+      if (!output) {
+        throw new Error("No corrected text returned");
+      }
+      setPolishedReply(output);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fix grammar.";
+      setPolishError(message);
+      toast.error(message);
+    } finally {
+      setIsPolishingReply(false);
+    }
+  };
+
+  const handleCopyAiReply = async () => {
+    if (!aiReply.trim()) return;
+    try {
+      await navigator.clipboard.writeText(aiReply);
+      toast.success("Copied AI reply");
     } catch (err) {
       toast.error("Failed to copy");
     }
+  };
+
+  const handleCopyPolished = async () => {
+    if (!polishedReply.trim()) return;
+    try {
+      await navigator.clipboard.writeText(polishedReply);
+      toast.success("Copied corrected text");
+    } catch (err) {
+      toast.error("Failed to copy");
+    }
+  };
+
+  const handleUpdateStatus = async (nextStatus: Lead["status"]) => {
+    if (!lead || isUpdatingStatus) return;
+    setIsUpdatingStatus(true);
+
+    const res = await fetch(`/api/leads/${lead.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: nextStatus }),
+    });
+
+    if (res.ok) {
+      const updated = await res.json();
+      setLead(updated);
+      setStatus(updated.status);
+      toast.success("Status updated");
+    } else {
+      toast.error("Failed to update status");
+    }
+
+    setIsUpdatingStatus(false);
   };
 
   const handleSetReminder = async () => {
@@ -398,12 +497,23 @@ export default function LeadDetailPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Badge className="px-3 py-1 text-xs bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300">
-                  {formatStatus(status)}
-                </Badge>
-                <Button variant="destructive" size="sm" onClick={handleArchiveLead} disabled={isArchiving}>
-                  {isArchiving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Archive className="h-4 w-4 mr-2" />}
-                  Archive
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleUpdateStatus("won")}
+                  disabled={isUpdatingStatus || status === "won"}
+                  className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300"
+                >
+                  Won
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleUpdateStatus("lost")}
+                  disabled={isUpdatingStatus || status === "lost"}
+                  className="border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-900/60 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                >
+                  Lost
                 </Button>
               </div>
             </div>
@@ -413,39 +523,164 @@ export default function LeadDetailPage() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Proposal Section */}
           <Card className="lg:col-span-2 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div>
-                <CardTitle>Proposal</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  AI-generated proposal — edit, copy, and send to the client.
-                </p>
-              </div>
-              <Button onClick={handleGenerateProposal} disabled={isGenerating || !lead.jobTitle}>
-                {isGenerating ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Sparkles className="h-4 w-4 mr-2" />
-                )}
-                Generate AI Proposal
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                value={proposal}
-                onChange={(e) => setProposal(e.target.value)}
-                placeholder="Your proposal will appear here after generation..."
-                className="min-h-[320px] resize-y font-mono text-sm leading-relaxed"
-              />
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  onClick={handleCopyProposal}
-                  disabled={!proposal.trim()}
-                  variant="secondary"
-                >
-                  <Copy className="h-4 w-4 mr-2" /> Copy
-                </Button>
+            <Collapsible open={isProposalOpen} onOpenChange={setIsProposalOpen}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <CardTitle>Proposal</CardTitle>
+                    {hasCopiedProposal ? (
+                      <Badge variant="success" className="text-[10px]">
+                        Copied
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    AI-generated proposal — edit, copy, and send to the client.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 transition-transform",
+                          isProposalOpen ? "rotate-180" : ""
+                        )}
+                      />
+                      <span className="sr-only">Toggle proposal</span>
+                    </Button>
+                  </CollapsibleTrigger>
+                  <Button onClick={handleGenerateProposal} disabled={isGenerating || !lead.jobTitle}>
+                    {isGenerating ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4 mr-2" />
+                    )}
+                    Generate AI Proposal
+                  </Button>
+                </div>
+              </CardHeader>
+              <CollapsibleContent>
+                <CardContent className="space-y-4">
+                  <Textarea
+                    value={proposal}
+                    onChange={(e) => setProposal(e.target.value)}
+                    placeholder="Your proposal will appear here after generation..."
+                    className="min-h-[320px] resize-y font-mono text-sm leading-relaxed"
+                  />
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      onClick={handleCopyProposal}
+                      disabled={!proposal.trim()}
+                      variant="secondary"
+                    >
+                      <Copy className="h-4 w-4 mr-2" /> Copy
+                    </Button>
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+              <CardContent className="space-y-6 border-t border-border/60 pt-5">
+                <div className="space-y-1">
+                  <CardTitle className="text-base">Follow-up Workspace</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Reply faster with AI, or write your own and clean up the grammar.
+                  </p>
+                </div>
+                <div className="grid gap-6 lg:grid-cols-2">
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">Generate AI reply</p>
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Client message
+                  </label>
+                  <Textarea
+                    value={clientMessage}
+                    onChange={(event) => setClientMessage(event.target.value)}
+                    placeholder="Paste the client message here... (optional)"
+                    className="min-h-[140px]"
+                  />
+                  <Button
+                    onClick={handleGenerateFollowUp}
+                    disabled={
+                      isGeneratingFollowUp ||
+                      !clientMessage.trim()
+                    }
+                    className="w-full"
+                  >
+                    {isGeneratingFollowUp ? "Generating..." : "Generate AI Response"}
+                  </Button>
+                  {followUpError ? (
+                    <p className="text-xs text-destructive">{followUpError}</p>
+                  ) : null}
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">AI response</p>
+                    <Textarea
+                      value={aiReply}
+                      onChange={(event) => setAiReply(event.target.value)}
+                      placeholder="Your AI response will appear here..."
+                      className="min-h-[180px]"
+                    />
+                    <Button
+                      variant="secondary"
+                      onClick={handleCopyAiReply}
+                      disabled={!aiReply.trim()}
+                      className="w-full"
+                    >
+                      <Copy className="mr-2 h-4 w-4" /> Copy response
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">Polish your reply</p>
+                  <Textarea
+                    value={draftReply}
+                    onChange={(event) => {
+                      setDraftReply(event.target.value);
+                      if (polishedReply) {
+                        setPolishedReply("");
+                      }
+                    }}
+                    placeholder="Write your response here..."
+                    className="min-h-[180px]"
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={handlePolishReply}
+                      disabled={isPolishingReply || !draftReply.trim()}
+                    >
+                      {isPolishingReply ? "Fixing..." : "Fix grammar & typos"}
+                    </Button>
+                    {polishedReply ? (
+                      <Button
+                        variant="secondary"
+                        onClick={handleCopyPolished}
+                        disabled={!polishedReply.trim()}
+                      >
+                        <Copy className="mr-2 h-4 w-4" /> Copy corrected
+                      </Button>
+                    ) : null}
+                    {polishedReply ? (
+                      <Button
+                        variant="ghost"
+                        onClick={() => setDraftReply(polishedReply)}
+                      >
+                        Replace draft
+                      </Button>
+                    ) : null}
+                  </div>
+                  {polishError ? (
+                    <p className="text-xs text-destructive">{polishError}</p>
+                  ) : null}
+                  <Textarea
+                    value={polishedReply}
+                    onChange={(event) => setPolishedReply(event.target.value)}
+                    placeholder="Corrected text will appear here..."
+                    className="min-h-[180px]"
+                  />
+                </div>
               </div>
             </CardContent>
+            </Collapsible>
           </Card>
 
           {/* Sidebar Controls */}
@@ -493,93 +728,6 @@ export default function LeadDetailPage() {
                 <p className="text-xs text-muted-foreground">
                   We&apos;ll remind you to follow up (email coming soon).
                 </p>
-
-                <Collapsible
-                  open={isReplyOpen}
-                  onOpenChange={setIsReplyOpen}
-                  className="rounded-md border border-border/60 bg-background/60"
-                >
-                  <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium">
-                    <span>Generate reply to recent client message</span>
-                    <ChevronDown
-                      className={cn(
-                        "h-4 w-4 transition-transform",
-                        isReplyOpen ? "rotate-180" : ""
-                      )}
-                    />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="space-y-3 px-3 pb-3">
-                    <p className="text-xs text-muted-foreground">
-                      Choose a source for the client&apos;s latest message.
-                    </p>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground">
-                        Message source
-                      </label>
-                      <Select
-                        value={messageSource}
-                        onValueChange={(value) =>
-                          setMessageSource(value as "paste" | "notes")
-                        }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Choose source" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="paste">Paste message</SelectItem>
-                          <SelectItem value="notes">Use lead notes</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {messageSource === "paste" ? (
-                      <Textarea
-                        value={clientMessage}
-                        onChange={(event) => setClientMessage(event.target.value)}
-                        placeholder="Paste the client message here..."
-                        className="min-h-[120px]"
-                      />
-                    ) : (
-                      <div className="rounded-md border border-border/60 bg-background/80 p-3 text-xs text-muted-foreground">
-                        {lead?.notes?.trim()
-                          ? lead.notes
-                          : "No notes yet. Add notes on this lead or choose Paste message."}
-                      </div>
-                    )}
-                    <Button
-                      onClick={handleGenerateFollowUp}
-                      disabled={
-                        isGeneratingFollowUp ||
-                        (messageSource === "paste"
-                          ? !clientMessage.trim()
-                          : !(lead?.notes?.trim() || ""))
-                      }
-                      className="w-full"
-                    >
-                      {isGeneratingFollowUp ? "Generating..." : "Generate AI Response"}
-                    </Button>
-                    {followUpError ? (
-                      <p className="text-xs text-destructive">{followUpError}</p>
-                    ) : null}
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">AI response</p>
-                      <Textarea
-                        value={followUpDraft}
-                        onChange={(event) => setFollowUpDraft(event.target.value)}
-                        placeholder="Your AI response will appear here..."
-                        className="min-h-[140px]"
-                      />
-                      <Button
-                        variant="secondary"
-                        onClick={handleCopyFollowUp}
-                        disabled={!followUpDraft.trim()}
-                        className="w-full"
-                      >
-                        <Copy className="mr-2 h-4 w-4" /> Copy response
-                      </Button>
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
 
                 {pendingReminders.length > 0 ? (
                   <div className="rounded-md border border-border/60 bg-background/60 p-3 text-xs">
