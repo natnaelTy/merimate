@@ -7,7 +7,7 @@ export default function StatsCard({
 }: {
   title: string;
   value: string | number;
-  description: string;
+  description?: string;
 }) {
   return (
     <Card className="rounded-lg bg-background/70 border-none">
@@ -16,7 +16,9 @@ export default function StatsCard({
           {title}
         </CardDescription>
         <CardTitle className="text-2xl">{value}</CardTitle>
-        <p className="text-xs text-muted-foreground">{description}</p>
+        {description ? (
+          <p className="text-xs text-muted-foreground">{description}</p>
+        ) : null}
       </CardHeader>
     </Card>
   );
