@@ -2,11 +2,12 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Calendar,
   ChevronRight,
   ChevronsUpDown,
+  BarChart3,
   Command,
   LogOut,
   MoreHorizontal,
@@ -18,7 +19,6 @@ import {
   Inbox,
 } from "lucide-react";
 
-import { signOut } from "@/app/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Collapsible,
@@ -51,13 +51,10 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { createClientSupabase } from "@/lib/supabase/client";
+import type { User } from "@supabase/supabase-js";
 
 const data = {
-  user: {
-    name: "Merimate Studio",
-    email: "hello@merimate.com",
-    avatar: "",
-  },
   teams: [
     {
       name: "Merimate",
@@ -85,6 +82,11 @@ const data = {
         { title: "Calendar", url: "#" },
         { title: "Notifications", url: "#" },
       ],
+    },
+    {
+      title: "Analytics",
+      url: "/analytics",
+      icon: BarChart3,
     },
     {
       title: "Leads",
@@ -136,6 +138,9 @@ const data = {
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [user, setUser] = React.useState<User | null>(null);
+  const [authChecked, setAuthChecked] = React.useState(false);
 
   const navItems = React.useMemo(
     () =>
@@ -145,6 +150,42 @@ export default function Sidebar() {
       })),
     [pathname]
   );
+
+  React.useEffect(() => {
+    let isMounted = true;
+    const supabase = createClientSupabase();
+
+    async function loadUser() {
+      const { data, error } = await supabase.auth.getUser();
+      if (!isMounted) return;
+      if (!error) {
+        setUser(data.user ?? null);
+      }
+      setAuthChecked(true);
+    }
+
+    void loadUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return;
+      setUser(session?.user ?? null);
+      setAuthChecked(true);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleSignOut = async () => {
+    const supabase = createClientSupabase();
+    await supabase.auth.signOut();
+    setUser(null);
+    router.push("/signin");
+  };
 
   return (
     <ShadcnSidebar collapsible="icon">
@@ -156,7 +197,7 @@ export default function Sidebar() {
         <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} authChecked={authChecked} onSignOut={handleSignOut} />
       </SidebarFooter>
       <SidebarRail />
     </ShadcnSidebar>
@@ -251,46 +292,60 @@ function NavMain({
     <SidebarGroup>
       <SidebarGroupLabel>Workspace</SidebarGroupLabel>
       <SidebarMenu>
-        {items.map((item) => (
-          <Collapsible
-            key={item.title}
-            asChild
-            defaultOpen={item.isActive}
-            className="group/collapsible"
-          >
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip={item.title} isActive={item.isActive}>
-                <Link href={item.url}>
-                  {item.icon ? <item.icon className="size-4" /> : null}
-                  <span>{item.title}</span>
-                </Link>
-              </SidebarMenuButton>
-              {item.items?.length ? (
-                <>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuAction className="data-[state=open]:rotate-90">
-                      <ChevronRight className="size-4" />
-                      <span className="sr-only">Toggle</span>
-                    </SidebarMenuAction>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub>
-                      {item.items.map((subItem) => (
-                        <SidebarMenuSubItem key={subItem.title}>
-                          <SidebarMenuSubButton asChild>
-                            <Link href={subItem.url}>
-                              <span>{subItem.title}</span>
-                            </Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ))}
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </>
-              ) : null}
-            </SidebarMenuItem>
-          </Collapsible>
-        ))}
+        {items.map((item) => {
+          const disableDropdown =
+            item.title === "Dashboard" || item.title === "Leads";
+
+          if (!item.items?.length || disableDropdown) {
+            return (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton asChild tooltip={item.title} isActive={item.isActive}>
+                  <Link href={item.url}>
+                    {item.icon ? <item.icon className="size-4" /> : null}
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          }
+
+          return (
+            <Collapsible
+              key={item.title}
+              asChild
+              defaultOpen={item.isActive}
+              className="group/collapsible"
+            >
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip={item.title} isActive={item.isActive}>
+                  <Link href={item.url}>
+                    {item.icon ? <item.icon className="size-4" /> : null}
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+                <CollapsibleTrigger asChild>
+                  <SidebarMenuAction className="data-[state=open]:rotate-90">
+                    <ChevronRight className="size-4" />
+                    <span className="sr-only">Toggle</span>
+                  </SidebarMenuAction>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarMenuSub>
+                    {item.items.map((subItem) => (
+                      <SidebarMenuSubItem key={subItem.title}>
+                        <SidebarMenuSubButton asChild>
+                          <Link href={subItem.url}>
+                            <span>{subItem.title}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    ))}
+                  </SidebarMenuSub>
+                </CollapsibleContent>
+              </SidebarMenuItem>
+            </Collapsible>
+          );
+        })}
       </SidebarMenu>
     </SidebarGroup>
   );
@@ -348,14 +403,28 @@ function NavProjects({
 
 function NavUser({
   user,
+  authChecked,
+  onSignOut,
 }: {
-  user: {
-    name: string;
-    email: string;
-    avatar: string;
-  };
+  user: User | null;
+  authChecked: boolean;
+  onSignOut: () => void;
 }) {
   const { isMobile } = useSidebar();
+  const displayName =
+    (user?.user_metadata?.full_name as string | undefined) ??
+    (user?.user_metadata?.name as string | undefined) ??
+    user?.email?.split("@")[0] ??
+    "Account";
+  const email = user?.email ?? "Unknown";
+  const avatarUrl =
+    (user?.user_metadata?.avatar_url as string | undefined) ??
+    (user?.user_metadata?.picture as string | undefined) ??
+    null;
+  const fallbackInitial =
+    displayName?.charAt(0).toUpperCase() ??
+    email?.charAt(0).toUpperCase() ??
+    "U";
 
   return (
     <SidebarMenu>
@@ -367,12 +436,20 @@ function NavUser({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">MR</AvatarFallback>
+                {avatarUrl ? (
+                  <AvatarImage src={avatarUrl} alt={displayName} />
+                ) : null}
+                <AvatarFallback className="rounded-lg">
+                  {fallbackInitial}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{user.name}</span>
-                <span className="truncate text-xs">{user.email}</span>
+                <span className="truncate font-semibold">
+                  {authChecked ? displayName : "Loading..."}
+                </span>
+                <span className="truncate text-xs">
+                  {authChecked ? email : "Checking account"}
+                </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -386,12 +463,16 @@ function NavUser({
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-2 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">MR</AvatarFallback>
+                  {avatarUrl ? (
+                    <AvatarImage src={avatarUrl} alt={displayName} />
+                  ) : null}
+                  <AvatarFallback className="rounded-lg">
+                    {fallbackInitial}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">{user.name}</span>
-                  <span className="truncate text-xs">{user.email}</span>
+                  <span className="truncate font-semibold">{displayName}</span>
+                  <span className="truncate text-xs">{email}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
@@ -403,12 +484,15 @@ function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <form action={signOut} className="w-full">
-                <button type="submit" className="flex w-full items-center gap-2">
-                  <LogOut className="size-4" />
-                  Sign out
-                </button>
-              </form>
+              <button
+                type="button"
+                onClick={onSignOut}
+                className="flex w-full items-center gap-2"
+                disabled={!user}
+              >
+                <LogOut className="size-4" />
+                Sign out
+              </button>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
