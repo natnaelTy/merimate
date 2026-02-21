@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Plus } from "lucide-react";
 import type { Lead } from "@/types/lead";
+import { toast } from "sonner";
 
 export default function AddLeadDialog({
   onLeadCreated,
@@ -39,35 +40,47 @@ export default function AddLeadDialog({
     setIsSubmitting(true);
     setError(null);
 
-    const response = await fetch("/api/leads", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        clientName: clientName || "Unknown",
-        jobTitle,
-        platform: platform || null,
-        notes: jobDescription || null,
-      }),
-    });
+    try {
+      const response = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientName: clientName || "Unknown",
+          jobTitle,
+          platform: platform || null,
+          notes: jobDescription || null,
+        }),
+      });
 
-    if (!response.ok) {
-      const data = (await response.json().catch(() => null)) as
-        | { error?: string; detail?: string }
-        | null;
-      setError(data?.detail || data?.error || "Unable to create lead");
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as
+          | { error?: string; detail?: string }
+          | null;
+        const message = data?.detail || data?.error || "Unable to create lead";
+        setError(message);
+        toast.error(message);
+        return;
+      }
+
+      const created = (await response.json()) as Lead;
+      onLeadCreated?.(created);
+      toast.success("Lead created", {
+        description: created.jobTitle || jobTitle || "Lead added to your list.",
+      });
+
+      setOpen(false);
+      setJobTitle("");
+      setPlatform("");
+      setJobDescription("");
+      setClientName("");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Unable to create lead";
+      setError(message);
+      toast.error(message);
+    } finally {
       setIsSubmitting(false);
-      return;
     }
-
-    const created = (await response.json()) as Lead;
-    onLeadCreated?.(created);
-
-    setOpen(false);
-    setJobTitle("");
-    setPlatform("");
-    setJobDescription("");
-    setClientName("");
-    setIsSubmitting(false);
   };
 
   return (
