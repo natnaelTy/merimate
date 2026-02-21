@@ -10,12 +10,20 @@ import { FcGoogle } from "react-icons/fc";
 
 
 
-export default async function SignInPage() {
+export default async function SignInPage({
+  searchParams,
+}: {
+  searchParams?: { sent?: string; error?: string; email?: string };
+}) {
   const supabase = await createServerSupabaseReadOnly();
   const { data } = await supabase.auth.getUser();
   if (data.user) {
     redirect("/dashboard");
   }
+
+  const sent = searchParams?.sent === "1";
+  const error = searchParams?.error;
+  const email = searchParams?.email;
 
   return (
     <Card>
@@ -29,6 +37,16 @@ export default async function SignInPage() {
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
+        {sent ? (
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            We sent a sign-in link to {email || "your email"}.
+          </div>
+        ) : null}
+        {error ? (
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </div>
+        ) : null}
         <form action={signInWithEmail} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
