@@ -10,7 +10,7 @@ export default function StatsCard({
   description?: string;
 }) {
   return (
-    <Card className="rounded-lg bg-background/70 border-none">
+    <Card className="rounded-lg bg-sidebar border-none">
       <CardHeader className="gap-1">
         <CardDescription className="text-[11px] uppercase tracking-[0.2em]">
           {title}
