@@ -70,7 +70,8 @@ export default async function DashboardPage() {
   const total = leadRows.length;
   const won = leadRows.filter((lead) => lead.status === "won").length;
   const lost = leadRows.filter((lead) => lead.status === "lost").length;
-  const winRate = total > 0 ? Math.round((won / total) * 100) : 0;
+  const closed = won + lost;
+  const winRate = closed > 0 ? Math.round((won / closed) * 100) : 0;
   const getWinRate = (wins: number, count: number) =>
     count > 0 ? Math.round((wins / count) * 100) : 0;
 
@@ -232,11 +233,11 @@ export default async function DashboardPage() {
           value={total}
           description="All active and closed opportunities."
         />
-        <StatsCard title="Won" value={won} />
+        <StatsCard title="Won" description="Number of leads won" value={won} />
         <StatsCard
           title="Win rate"
           value={`${winRate}%`}
-          description="Won / total leads."
+          description="Won / closed leads."
         />
         <StatsCard
           title="Reminders"
@@ -244,106 +245,6 @@ export default async function DashboardPage() {
           description="Due this week."
         />
       </div>
-
-      <Card className="rounded-lg bg-background/70 border-none">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-lg font-semibold">Analytics &amp; Win Rate</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Win rate is calculated as won leads divided by total leads.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-lg border border-border/60 bg-card/70 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                Win Rate
-              </p>
-              <p className="mt-2 text-3xl font-semibold">{winRate}%</p>
-              <p className="text-xs text-muted-foreground">
-                {total > 0
-                  ? `${won} won out of ${total} total leads`
-                  : "No leads yet"}
-              </p>
-            </div>
-            <div className="rounded-lg border border-border/60 bg-card/70 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                What&apos;s working
-              </p>
-              <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
-                {insights.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="rounded-lg border border-border/60 bg-card/70 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                Not working
-              </p>
-              <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
-                {cautions.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-lg border border-border/60 bg-card/70 p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Breakdown by platform</p>
-                <Badge>{platformBreakdown.length}</Badge>
-              </div>
-              <div className="mt-3 space-y-2 text-sm">
-                {platformBreakdown.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No platform data yet.</p>
-                ) : (
-                  platformBreakdown.map((row) => (
-                    <div
-                      key={row.label}
-                      className="flex items-center justify-between rounded-md border border-border/60 bg-background/70 px-3 py-2"
-                    >
-                      <div>
-                        <p className="font-medium">{row.label}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {row.won} won / {row.total} leads
-                        </p>
-                      </div>
-                      <span className="text-sm font-semibold">{row.winRate}%</span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-border/60 bg-card/70 p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Breakdown by job type</p>
-                <Badge>{jobTypeBreakdown.length}</Badge>
-              </div>
-              <div className="mt-3 space-y-2 text-sm">
-                {jobTypeBreakdown.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No job type data yet.</p>
-                ) : (
-                  jobTypeBreakdown.map((row) => (
-                    <div
-                      key={row.label}
-                      className="flex items-center justify-between rounded-md border border-border/60 bg-background/70 px-3 py-2"
-                    >
-                      <div>
-                        <p className="font-medium">{row.label}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {row.won} won / {row.total} leads
-                        </p>
-                      </div>
-                      <span className="text-sm font-semibold">{row.winRate}%</span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       <RecentLeads
         className="min-h-[100vh] flex-1 md:min-h-min"
