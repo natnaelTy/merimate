@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import LeadDetailSkeleton from "./LeadDetailSkeleton";
 import {
   Select,
   SelectContent,
@@ -20,9 +21,20 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { differenceInCalendarDays, format } from "date-fns";
-import { CalendarIcon, Sparkles, Loader2, Copy, Archive, ChevronDown } from "lucide-react";
+import {
+  CalendarIcon,
+  Sparkles,
+  Loader2,
+  Copy,
+  Archive,
+  ChevronDown,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Lead } from "@/types/lead";
 import { toast } from "sonner";
@@ -132,9 +144,7 @@ export default function LeadDetailPage() {
         date: new Date(reminder.reminderAt),
       }))
       .filter(({ date }) => !Number.isNaN(date.getTime()))
-      .filter(
-        ({ date }) => differenceInCalendarDays(date, now) <= 0
-      )
+      .filter(({ date }) => differenceInCalendarDays(date, now) <= 0)
       .sort((a, b) => a.date.getTime() - b.date.getTime());
 
     if (dueReminders.length === 0) return;
@@ -250,7 +260,8 @@ export default function LeadDetailPage() {
       const data = (await response.json()) as { message: string };
       setAiReply(data.message);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to generate reply.";
+      const message =
+        err instanceof Error ? err.message : "Failed to generate reply.";
       setFollowUpError(message);
       toast.error(message);
     } finally {
@@ -287,7 +298,8 @@ export default function LeadDetailPage() {
       }
       setPolishedReply(output);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to fix grammar.";
+      const message =
+        err instanceof Error ? err.message : "Failed to fix grammar.";
       setPolishError(message);
       toast.error(message);
     } finally {
@@ -359,7 +371,9 @@ export default function LeadDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "follow-up" }),
       });
-      toast.success("Reminder set", { description: "We'll remind you to follow up." });
+      toast.success("Reminder set", {
+        description: "We'll remind you to follow up.",
+      });
       setReminderDate(undefined);
       await loadReminders();
     } else {
@@ -445,7 +459,9 @@ export default function LeadDetailPage() {
 
     setIsArchiving(true);
 
-    const res = await fetch(`/api/leads/${lead.id}/archive`, { method: "POST" });
+    const res = await fetch(`/api/leads/${lead.id}/archive`, {
+      method: "POST",
+    });
     if (res.ok) {
       router.push("/leads");
     } else {
@@ -458,7 +474,7 @@ export default function LeadDetailPage() {
     .filter((reminder) => !reminder.sent)
     .sort(
       (a, b) =>
-        new Date(a.reminderAt).getTime() - new Date(b.reminderAt).getTime()
+        new Date(a.reminderAt).getTime() - new Date(b.reminderAt).getTime(),
     );
 
   const getReminderBadge = (reminderAt: string) => {
@@ -478,21 +494,24 @@ export default function LeadDetailPage() {
     return type.charAt(0).toUpperCase() + type.slice(1);
   };
 
-
   if (error) return <p className="p-8 text-destructive">{error}</p>;
-  if (!lead) return <p className="p-8 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></p>
+  if (!lead) return <LeadDetailSkeleton />;
 
   return (
     <div className="min-h-screen">
       <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-8">
         {/* Header Card */}
-        <Card className="border-none shadow-sm">
+        <Card className="bg-sidebar border-none shadow-sm">
           <CardContent className="p-6">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="space-y-2">
-                <h1 className="text-2xl font-bold tracking-tight">{lead.jobTitle || "Untitled Lead"}</h1>
+                <h1 className="text-2xl font-bold tracking-tight">
+                  {lead.jobTitle || "Untitled Lead"}
+                </h1>
                 <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                  <span className="font-medium">{lead.platform || "Unknown Platform"}</span>
+                  <span className="font-medium">
+                    {lead.platform || "Unknown Platform"}
+                  </span>
                   {lead.clientName && <span> • Client: {lead.clientName}</span>}
                 </div>
               </div>
@@ -522,7 +541,7 @@ export default function LeadDetailPage() {
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Proposal Section */}
-          <Card className="lg:col-span-2 shadow-sm">
+          <Card className="lg:col-span-2 shadow-sm bg-sidebar border-none">
             <Collapsible open={isProposalOpen} onOpenChange={setIsProposalOpen}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div>
@@ -544,13 +563,16 @@ export default function LeadDetailPage() {
                       <ChevronDown
                         className={cn(
                           "h-4 w-4 transition-transform",
-                          isProposalOpen ? "rotate-180" : ""
+                          isProposalOpen ? "rotate-180" : "",
                         )}
                       />
                       <span className="sr-only">Toggle proposal</span>
                     </Button>
                   </CollapsibleTrigger>
-                  <Button onClick={handleGenerateProposal} disabled={isGenerating || !lead.jobTitle}>
+                  <Button
+                    onClick={handleGenerateProposal}
+                    disabled={isGenerating || !lead.jobTitle}
+                  >
                     {isGenerating ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
@@ -581,129 +603,127 @@ export default function LeadDetailPage() {
               </CollapsibleContent>
               <CardContent className="space-y-6 border-t border-border/60 pt-5">
                 <div className="space-y-1">
-                  <CardTitle className="text-base">Follow-up Workspace</CardTitle>
+                  <CardTitle className="text-base">
+                    Follow-up Workspace
+                  </CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Reply faster with AI, or write your own and clean up the grammar.
+                    Reply faster with AI, or write your own and clean up the
+                    grammar.
                   </p>
                 </div>
                 <div className="grid gap-6 lg:grid-cols-2">
-                <div className="space-y-3">
-                  <p className="text-sm font-medium">Generate AI reply</p>
-                  <label className="text-xs font-medium text-muted-foreground">
-                    Client message
-                  </label>
-                  <Textarea
-                    value={clientMessage}
-                    onChange={(event) => setClientMessage(event.target.value)}
-                    placeholder="Paste the client message here... (optional)"
-                    className="min-h-[140px]"
-                  />
-                  <Button
-                    onClick={handleGenerateFollowUp}
-                    disabled={
-                      isGeneratingFollowUp ||
-                      !clientMessage.trim()
-                    }
-                    className="w-full"
-                  >
-                    {isGeneratingFollowUp ? "Generating..." : "Generate AI Response"}
-                  </Button>
-                  {followUpError ? (
-                    <p className="text-xs text-destructive">{followUpError}</p>
-                  ) : null}
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">AI response</p>
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">Generate AI reply</p>
                     <Textarea
-                      value={aiReply}
-                      onChange={(event) => setAiReply(event.target.value)}
-                      placeholder="Your AI response will appear here..."
+                      value={clientMessage}
+                      onChange={(event) => setClientMessage(event.target.value)}
+                      placeholder="Paste the client message here"
+                      className="min-h-[140px]"
+                    />
+                    <Button
+                      onClick={handleGenerateFollowUp}
+                      disabled={isGeneratingFollowUp || !clientMessage.trim()}
+                      className="w-full"
+                    >
+                      {isGeneratingFollowUp
+                        ? "Generating..."
+                        : "Generate AI Response"}
+                    </Button>
+                    {followUpError ? (
+                      <p className="text-xs text-destructive">
+                        {followUpError}
+                      </p>
+                    ) : null}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">AI response</p>
+                      <Textarea
+                        value={aiReply}
+                        onChange={(event) => setAiReply(event.target.value)}
+                        placeholder="Your AI response will appear here..."
+                        className="min-h-[180px]"
+                      />
+                      <Button
+                        variant="secondary"
+                        onClick={handleCopyAiReply}
+                        disabled={!aiReply.trim()}
+                        className="w-full"
+                      >
+                        <Copy className="mr-2 h-4 w-4" /> Copy response
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">Polish your reply</p>
+                    <Textarea
+                      value={draftReply}
+                      onChange={(event) => {
+                        setDraftReply(event.target.value);
+                        if (polishedReply) {
+                          setPolishedReply("");
+                        }
+                      }}
+                      placeholder="Write your response here..."
+                      className="min-h-[140px]"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        onClick={handlePolishReply}
+                        disabled={isPolishingReply || !draftReply.trim()}
+                        className="w-full"
+                      >
+                        {isPolishingReply ? "Fixing..." : "Fix grammar & typos"}
+                      </Button>
+                    </div>
+                    <h2 className="text-sm font-medium">Corrected AI reply</h2>
+                    {polishError ? (
+                      <p className="text-xs text-destructive">{polishError}</p>
+                    ) : null}
+                    <Textarea
+                      value={polishedReply}
+                      onChange={(event) => setPolishedReply(event.target.value)}
+                      placeholder="Corrected text will appear here..."
                       className="min-h-[180px]"
                     />
                     <Button
                       variant="secondary"
-                      onClick={handleCopyAiReply}
-                      disabled={!aiReply.trim()}
+                      onClick={handleCopyPolished}
+                      disabled={!polishedReply.trim()}
                       className="w-full"
                     >
-                      <Copy className="mr-2 h-4 w-4" /> Copy response
+                      <Copy className="mr-2 h-4 w-4" /> Copy corrected
                     </Button>
                   </div>
                 </div>
-
-                <div className="space-y-3">
-                  <p className="text-sm font-medium">Polish your reply</p>
-                  <Textarea
-                    value={draftReply}
-                    onChange={(event) => {
-                      setDraftReply(event.target.value);
-                      if (polishedReply) {
-                        setPolishedReply("");
-                      }
-                    }}
-                    placeholder="Write your response here..."
-                    className="min-h-[180px]"
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      onClick={handlePolishReply}
-                      disabled={isPolishingReply || !draftReply.trim()}
-                    >
-                      {isPolishingReply ? "Fixing..." : "Fix grammar & typos"}
-                    </Button>
-                    {polishedReply ? (
-                      <Button
-                        variant="secondary"
-                        onClick={handleCopyPolished}
-                        disabled={!polishedReply.trim()}
-                      >
-                        <Copy className="mr-2 h-4 w-4" /> Copy corrected
-                      </Button>
-                    ) : null}
-                    {polishedReply ? (
-                      <Button
-                        variant="ghost"
-                        onClick={() => setDraftReply(polishedReply)}
-                      >
-                        Replace draft
-                      </Button>
-                    ) : null}
-                  </div>
-                  {polishError ? (
-                    <p className="text-xs text-destructive">{polishError}</p>
-                  ) : null}
-                  <Textarea
-                    value={polishedReply}
-                    onChange={(event) => setPolishedReply(event.target.value)}
-                    placeholder="Corrected text will appear here..."
-                    className="min-h-[180px]"
-                  />
-                </div>
-              </div>
-            </CardContent>
+              </CardContent>
             </Collapsible>
           </Card>
 
           {/* Sidebar Controls */}
           <div className="space-y-6">
             {/* Follow-up */}
-            <Card className="shadow-sm">
+            <Card className="shadow-sm bg-sidebar border-none">
               <CardHeader>
                 <CardTitle>Follow-Up</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Next follow-up date</label>
+                  <label className="text-sm font-medium">
+                    Next follow-up date
+                  </label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         className={cn(
                           "w-full justify-start text-left font-normal",
-                          !reminderDate && "text-muted-foreground"
+                          !reminderDate && "text-muted-foreground",
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {reminderDate ? format(reminderDate, "PPP") : "Pick a date"}
+                        {reminderDate
+                          ? format(reminderDate, "PPP")
+                          : "Pick a date"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
@@ -722,7 +742,9 @@ export default function LeadDetailPage() {
                   disabled={isSettingReminder || !reminderDate}
                   className="w-full"
                 >
-                  {isSettingReminder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isSettingReminder && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
                   Schedule Follow-Up
                 </Button>
                 <p className="text-xs text-muted-foreground">
@@ -732,9 +754,13 @@ export default function LeadDetailPage() {
                 {pendingReminders.length > 0 ? (
                   <div className="rounded-md border border-border/60 bg-background/60 p-3 text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Next follow-up</span>
+                      <span className="text-muted-foreground">
+                        Next follow-up
+                      </span>
                       {(() => {
-                        const badge = getReminderBadge(pendingReminders[0].reminderAt);
+                        const badge = getReminderBadge(
+                          pendingReminders[0].reminderAt,
+                        );
                         return badge ? (
                           <Badge variant={badge.tone} className="text-[10px]">
                             {badge.label}
@@ -758,7 +784,9 @@ export default function LeadDetailPage() {
                       size="sm"
                       className="mt-3 w-full"
                       disabled={isUpdatingReminder}
-                      onClick={() => handleMarkReminderSent(pendingReminders[0].id)}
+                      onClick={() =>
+                        handleMarkReminderSent(pendingReminders[0].id)
+                      }
                     >
                       {isUpdatingReminder ? "Updating..." : "Mark as done"}
                     </Button>
@@ -772,7 +800,7 @@ export default function LeadDetailPage() {
             </Card>
 
             {/* Notes */}
-            <Card className="shadow-sm">
+            <Card className="shadow-sm bg-sidebar border-none">
               <CardHeader>
                 <CardTitle>Notes</CardTitle>
               </CardHeader>
@@ -792,20 +820,28 @@ export default function LeadDetailPage() {
                 </Button>
               </CardContent>
             </Card>
-            
+
             {/* Lead Details */}
-            <Card className="shadow-sm">
+            <Card className="shadow-sm bg-sidebar border-none">
               <CardHeader>
                 <CardTitle>Lead Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Client name (for personalization)</label>
-                  <Input value={clientName} onChange={(e) => setClientName(e.target.value)} />
+                  <label className="text-sm font-medium">
+                    Client name (for personalization)
+                  </label>
+                  <Input
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Job title</label>
-                  <Input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+                  <Input
+                    value={jobTitle}
+                    onChange={(e) => setJobTitle(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Platform</label>
