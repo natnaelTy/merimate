@@ -5,6 +5,8 @@ import { Card } from "@/components/ui/card";
 import AddLeadDialog from "@/components/leads/LeadCreateDialog";
 import { Separator } from "@/components/ui/separator";
 import type { Lead } from "@/types/lead";
+import LeadsSkeleton from "./LeadsSkeleton";
+import { toast } from "sonner";
 
 const formatStatus = (status: Lead["status"]) =>
   status
@@ -19,15 +21,24 @@ export default function LeadsPage() {
 
   useEffect(() => {
     const loadLeads = async () => {
-      const response = await fetch("/api/leads", { cache: "no-store" });
-      if (!response.ok) {
-        setError("Unable to load leads");
+      try {
+        const response = await fetch("/api/leads", { cache: "no-store" });
+        if (!response.ok) {
+          const message = "Unable to load leads";
+          setError(message);
+          toast.error(message);
+          return;
+        }
+        const data = (await response.json()) as Lead[];
+        setLeads(data);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Unable to load leads";
+        setError(message);
+        toast.error(message);
+      } finally {
         setIsLoading(false);
-        return;
       }
-      const data = (await response.json()) as Lead[];
-      setLeads(data);
-      setIsLoading(false);
     };
 
     loadLeads();
@@ -44,26 +55,28 @@ export default function LeadsPage() {
 
       <Separator />
 
-      {isLoading ? <p className="text-sm">Loading...</p> : null}
+      {isLoading ? <LeadsSkeleton /> : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-        {leads.map((lead) => (
-          <Card
-            key={lead.id}
-            className="p-5 cursor-pointer hover:shadow-md transition"
-            onClick={() => (window.location.href = `/leads/${lead.id}`)}
-          >
-            <p className="font-medium text-sm">{lead.jobTitle}</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {lead.platform || "—"}
-            </p>
-            <p className="text-xs mt-2 text-primary">
-              {formatStatus(lead.status)}
-            </p>
-          </Card>
-        ))}
-      </div>
+      {!isLoading ? (
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+          {leads.map((lead) => (
+            <Card
+              key={lead.id}
+              className="p-5 cursor-pointer hover:shadow-md transition border-none bg-sidebar"
+              onClick={() => (window.location.href = `/leads/${lead.id}`)}
+            >
+              <p className="font-medium text-sm">{lead.jobTitle}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {lead.platform || "—"}
+              </p>
+              <p className="text-xs mt-2 text-primary">
+                {formatStatus(lead.status)}
+              </p>
+            </Card>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
