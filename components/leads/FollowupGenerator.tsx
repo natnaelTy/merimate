@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 export default function FollowupGenerator({
   clientName,
@@ -33,8 +34,12 @@ export default function FollowupGenerator({
 
       const data = (await response.json()) as { message: string };
       setResult(data.message);
+      toast.success("Follow-up generated");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unexpected error");
+      const message =
+        err instanceof Error ? err.message : "Unexpected error";
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
