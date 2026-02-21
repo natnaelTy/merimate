@@ -2,10 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { createServerSupabaseReadOnly } from "@/lib/supabase/server";
-import { signUpWithEmail, signUpWithGoogle } from "@/app/(auth)/actions";
+import { signUpWithGoogle } from "@/app/(auth)/actions";
+import SignupForm from "@/components/auth/SignupForm";
 
 export default async function SignUpPage() {
   const supabase = await createServerSupabaseReadOnly();
@@ -26,21 +25,7 @@ export default async function SignUpPage() {
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
-        <form action={signUpWithEmail} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="you@studio.com"
-              required
-            />
-          </div>
-          <Button type="submit" className="w-full">
-            Email me a sign-up link
-          </Button>
-        </form>
+        <SignupForm />
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <span className="h-px flex-1 bg-border" />
           or
