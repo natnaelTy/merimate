@@ -66,7 +66,7 @@ export default function RecentLeads({
   className?: string;
 }) {
   return (
-    <Card className={cn("rounded-lg bg-background/70 border-none", className)}>
+    <Card className={cn("rounded-lg bg-sidebar border-none", className)}>
       <CardHeader>
         <CardTitle className="text-lg font-semibold">Recent leads</CardTitle>
       </CardHeader>
