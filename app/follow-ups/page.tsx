@@ -70,41 +70,45 @@ function FollowUpSection({
   rows: FollowUpRow[];
   showDrafts: boolean;
 }) {
-
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="space-y-1">
-        <CardTitle>{title}</CardTitle>
+    <Card className="overflow-hidden border-border/60 bg-background/70 shadow-sm">
+      <CardHeader className="space-y-1 bg-muted/40">
+        <CardTitle className="text-lg">{title}</CardTitle>
         <p className="text-sm text-muted-foreground">
           {rows.length} follow-up{rows.length === 1 ? "" : "s"}
+          {showDrafts ? " • Drafts appear below each lead" : ""}
         </p>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 pt-5">
         {rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{emptyText}</p>
+          <div className="rounded-lg border border-dashed border-border/60 bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
+            {emptyText}
+          </div>
         ) : (
           rows.map((row) => {
             const dueMeta = getDueMeta(row.reminderAt);
             return (
               <div
                 key={row.id}
-                className="rounded-lg border border-border/60 bg-background/60 px-4 py-3 text-sm transition hover:bg-background/80"
+                className="rounded-xl border border-border/60 bg-background/70 px-4 py-3 text-sm shadow-sm transition hover:border-border/80 hover:bg-background"
               >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <Link href={`/leads/${row.leadId}`} className="block">
-                    <p className="font-medium">{row.clientName}</p>
-                    <p className="text-xs text-muted-foreground">{row.jobTitle}</p>
-                    <p className="text-xs text-muted-foreground text-primary mt-2">
-                      {row.platform || "—"}
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <Link href={`/leads/${row.leadId}`} className="group block space-y-1">
+                    <p className="text-base font-medium group-hover:text-primary">
+                      {row.clientName}
                     </p>
+                    <p className="text-xs text-muted-foreground">{row.jobTitle}</p>
+                    <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-muted-foreground">
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-foreground/80">
+                        {row.platform || "—"}
+                      </span>
+                      <span className="text-muted-foreground">Due {formatDate(row.reminderAt)}</span>
+                    </div>
                   </Link>
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant={dueMeta.variant}>{dueMeta.label}</Badge>
                     {row.message ? <Badge variant="success">Draft ready</Badge> : null}
                     <Badge variant={statusVariant[row.status]}>{row.status}</Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDate(row.reminderAt)}
-                    </span>
                   </div>
                 </div>
                 {showDrafts && row.message ? (
@@ -219,33 +223,78 @@ export default async function FollowUpsPage() {
   }
 
   return (
-    <div className="p-6 sm:p-8 max-w-6xl w-full mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Follow-ups</h1>
-        <p className="text-sm text-muted-foreground">
-          Track every lead with a scheduled follow-up.
-        </p>
-      </div>
-      
-      <div className="grid gap-6 lg:grid-cols-3">
-        <FollowUpSection
-          title="Upcoming follow-ups"
-          emptyText="No upcoming follow-ups."
-          rows={upcoming}
-          showDrafts={false}
-        />
-        <FollowUpSection
-          title="Overdue follow-ups"
-          emptyText="No overdue follow-ups."
-          rows={overdue}
-          showDrafts
-        />
-        <FollowUpSection
-          title="Today's follow-ups"
-          emptyText="Nothing due today."
-          rows={today}
-          showDrafts
-        />
+    <div className="min-h-screen bg-muted/10">
+      <div className="mx-auto w-full max-w-6xl space-y-6 p-6 sm:p-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">Follow-ups</h1>
+            <p className="text-sm text-muted-foreground">
+              Track every lead with a scheduled follow-up.
+            </p>
+          </div>
+          <Link
+            href="/leads"
+            className="text-sm font-medium text-primary hover:text-primary/80"
+          >
+            View all leads
+          </Link>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="border-border/60 bg-background/70 shadow-sm">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Overdue
+              </CardTitle>
+              <p className="text-2xl font-semibold text-foreground">{overdue.length}</p>
+            </CardHeader>
+          </Card>
+          <Card className="border-border/60 bg-background/70 shadow-sm">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Due today
+              </CardTitle>
+              <p className="text-2xl font-semibold text-foreground">{today.length}</p>
+            </CardHeader>
+          </Card>
+          <Card className="border-border/60 bg-background/70 shadow-sm">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Upcoming
+              </CardTitle>
+              <p className="text-2xl font-semibold text-foreground">{upcoming.length}</p>
+            </CardHeader>
+          </Card>
+          <Card className="border-border/60 bg-background/70 shadow-sm">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total scheduled
+              </CardTitle>
+              <p className="text-2xl font-semibold text-foreground">{followUps.length}</p>
+            </CardHeader>
+          </Card>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-3">
+          <FollowUpSection
+            title="Overdue follow-ups"
+            emptyText="No overdue follow-ups."
+            rows={overdue}
+            showDrafts
+          />
+          <FollowUpSection
+            title="Today's follow-ups"
+            emptyText="Nothing due today."
+            rows={today}
+            showDrafts
+          />
+          <FollowUpSection
+            title="Upcoming follow-ups"
+            emptyText="No upcoming follow-ups."
+            rows={upcoming}
+            showDrafts={false}
+          />
+        </div>
       </div>
     </div>
   );
