@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClientSupabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import OTPDialog from "@/components/ui/otpdialog";
 
 type Step = "details" | "otp";
 
@@ -16,9 +17,9 @@ export default function SignupForm() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isOtpOpen, setIsOtpOpen] = useState(false);
 
   const register = async () => {
     const trimmedEmail = email.trim();
@@ -69,12 +70,12 @@ export default function SignupForm() {
       description: "Check your email for the verification code.",
     });
     setStep("otp");
+    setIsOtpOpen(true);
     setIsSubmitting(false);
   };
 
-  const verifyOtp = async () => {
+  const verifyOtp = async (token: string) => {
     const trimmedEmail = email.trim();
-    const token = otp.trim();
     if (!token) {
       setError("Enter the verification code.");
       return;
@@ -84,7 +85,7 @@ export default function SignupForm() {
     setError(null);
 
     const supabase = createClientSupabase();
-    const { error: verifyError } = await supabase.auth.verifyOtp({
+    const { data, error: verifyError } = await supabase.auth.verifyOtp({
       email: trimmedEmail,
       token,
       type: "signup",
@@ -97,13 +98,73 @@ export default function SignupForm() {
       return;
     }
 
+    let activeUser = data.user ?? null;
+
+    if (!data.session) {
+      const { data: signInData, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email: trimmedEmail,
+          password,
+        });
+
+      if (signInError) {
+        const message = signInError.message || "Account verified. Please sign in.";
+        setError(message);
+        toast.error(message);
+        setIsSubmitting(false);
+        return;
+      }
+
+      activeUser = signInData.user ?? activeUser;
+    }
+
+    if (activeUser?.id) {
+      const { error: profileError } = await supabase
+        .from("users")
+        .upsert(
+          { id: activeUser.id, email: activeUser.email ?? trimmedEmail },
+          { onConflict: "id" }
+        );
+
+      if (profileError) {
+        toast.error("Account verified, but profile setup failed.");
+      }
+    }
+
     toast.success("Account verified");
     router.push("/dashboard");
   };
 
+  const resendOtp = async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError("Enter your email to continue.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    const supabase = createClientSupabase();
+    const { error: resendError } = await supabase.auth.resend({
+      type: "signup",
+      email: trimmedEmail,
+    });
+
+    if (resendError) {
+      setError(resendError.message);
+      toast.error(resendError.message);
+      setIsSubmitting(false);
+      return;
+    }
+
+    toast.success("Verification code resent");
+    setIsSubmitting(false);
+  };
+
   return (
     <div className="space-y-4">
-      {error ? (
+      {error && step === "details" ? (
         <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {error}
         </div>
@@ -122,7 +183,7 @@ export default function SignupForm() {
             <Input
               id="fullName"
               name="fullName"
-              placeholder="Merimate Studio"
+              placeholder="John Doe"
               autoComplete="name"
               value={fullName}
               onChange={(event) => setFullName(event.target.value)}
@@ -135,7 +196,7 @@ export default function SignupForm() {
               id="email"
               name="email"
               type="email"
-              placeholder="you@studio.com"
+              placeholder="example@gmail.com"
               autoComplete="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
@@ -159,13 +220,7 @@ export default function SignupForm() {
           </Button>
         </form>
       ) : (
-        <form
-          className="space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void verifyOtp();
-          }}
-        >
+        <div className="space-y-3">
           <div className="space-y-1 text-sm text-muted-foreground">
             <p>We sent a code to {email}.</p>
             <button
@@ -173,41 +228,31 @@ export default function SignupForm() {
               className="text-xs font-medium text-foreground"
               onClick={() => {
                 setStep("details");
-                setOtp("");
+                setIsOtpOpen(false);
                 setError(null);
               }}
             >
               Use a different email
             </button>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="otp">Verification code</Label>
-            <Input
-              id="otp"
-              name="otp"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              placeholder="6-digit code"
-              value={otp}
-              onChange={(event) => setOtp(event.target.value)}
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button type="submit" className="flex-1" disabled={isSubmitting}>
-              {isSubmitting ? "Verifying..." : "Verify & continue"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={() => void register()}
-              disabled={isSubmitting}
-            >
-              Resend code
-            </Button>
-          </div>
-        </form>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => setIsOtpOpen(true)}
+          >
+            Enter verification code
+          </Button>
+          <OTPDialog
+            open={isOtpOpen}
+            onOpenChange={setIsOtpOpen}
+            email={email}
+            isSubmitting={isSubmitting}
+            error={error}
+            onVerify={verifyOtp}
+            onResend={resendOtp}
+          />
+        </div>
       )}
     </div>
   );
