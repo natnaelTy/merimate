@@ -46,6 +46,7 @@
     "react-dom": "19.2.3",
     "react-icons": "^5.5.0",
     "recharts": "^3.7.0",
+    "resend": "^6.9.2",
     "sonner": "^2.0.7",
     "tailwind-merge": "^2.6.1",
     "tunnel-rat": "^0.1.2"
