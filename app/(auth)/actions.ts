@@ -8,13 +8,13 @@ async function getSupabase() {
   return createServerSupabase();
 }
 
-function getSiteUrl() {
+async function getSiteUrl() {
   const envUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   if (envUrl) {
     return envUrl.replace(/\/$/, "");
   }
 
-  const headerList = headers();
+  const headerList = await headers();
   const origin = headerList.get("origin");
   if (origin) {
     return origin.replace(/\/$/, "");
@@ -26,8 +26,8 @@ function getSiteUrl() {
   return host ? `${proto}://${host}` : "http://localhost:3000";
 }
 
-function getCallbackUrl() {
-  return `${getSiteUrl()}/auth/callback`;
+async function getCallbackUrl() {
+  return `${await getSiteUrl()}/auth/callback`;
 }
 
 export async function signInWithEmail(formData: FormData) {
@@ -40,7 +40,7 @@ export async function signInWithEmail(formData: FormData) {
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${getCallbackUrl()}?next=/dashboard`,
+      emailRedirectTo: `${await getCallbackUrl()}?next=/dashboard`,
     },
   });
 
@@ -61,7 +61,7 @@ export async function signUpWithEmail(formData: FormData) {
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${getCallbackUrl()}?next=/dashboard`,
+      emailRedirectTo: `${await getCallbackUrl()}?next=/dashboard`,
       shouldCreateUser: true,
     },
   });
@@ -78,7 +78,7 @@ export async function signInWithGoogle() {
   const { data } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${getCallbackUrl()}?next=/dashboard`,
+      redirectTo: `${await getCallbackUrl()}?next=/dashboard`,
     },
   });
 
