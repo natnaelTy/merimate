@@ -18,6 +18,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import ThemeToggle from "@/components/ThemeToggle";
+import NotificationBell from "@/components/notifications/NotificationBell";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -82,7 +83,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          <div className="ml-auto flex items-center">
+          <div className="ml-auto flex items-center gap-2">
+            <NotificationBell />
             <ThemeToggle />
           </div>
         </header>
