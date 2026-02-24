@@ -58,24 +58,36 @@ export default function LeadsPage() {
       {isLoading ? <LeadsSkeleton /> : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-      {!isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-          {leads.map((lead) => (
-            <Card
-              key={lead.id}
-              className="p-5 cursor-pointer hover:shadow-md transition border-none bg-sidebar"
-              onClick={() => (window.location.href = `/leads/${lead.id}`)}
-            >
-              <p className="font-medium text-sm">{lead.jobTitle}</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {lead.platform || "—"}
-              </p>
-              <p className="text-xs mt-2 text-primary">
-                {formatStatus(lead.status)}
-              </p>
-            </Card>
-          ))}
-        </div>
+      {!isLoading && !error ? (
+        leads.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border bg-background/60 p-10 text-center">
+            <div className="text-3xl" aria-hidden="true">
+              🧭
+            </div>
+            <p className="mt-3 text-base font-semibold">No leads yet</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Create a new one to start tracking your pipeline.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+            {leads.map((lead) => (
+              <Card
+                key={lead.id}
+                className="p-5 cursor-pointer hover:shadow-md transition border-none bg-sidebar"
+                onClick={() => (window.location.href = `/leads/${lead.id}`)}
+              >
+                <p className="font-medium text-sm">{lead.jobTitle}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {lead.platform || "—"}
+                </p>
+                <p className="text-xs mt-2 text-primary">
+                  {formatStatus(lead.status)}
+                </p>
+              </Card>
+            ))}
+          </div>
+        )
       ) : null}
     </div>
   );
