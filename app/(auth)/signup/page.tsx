@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { createServerSupabaseReadOnly } from "@/lib/supabase/server";
 import { signUpWithGoogle } from "@/app/(auth)/actions";
 import SignupForm from "@/components/auth/SignupForm";
+import { FcGoogle } from "react-icons/fc";
+
 
 export default async function SignUpPage() {
   const supabase = await createServerSupabaseReadOnly();
@@ -33,7 +35,7 @@ export default async function SignUpPage() {
         </div>
         <form action={signUpWithGoogle}>
           <Button type="submit" variant="outline" className="w-full">
-            Continue with Google
+           <FcGoogle className="h-5 w-5 mr-1" /> Continue with Google
           </Button>
         </form>
         <div className="flex items-center justify-between text-xs text-muted-foreground">
