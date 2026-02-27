@@ -21,7 +21,7 @@ import { LayoutDashboard, LogOut, Settings } from "lucide-react";
 const navLinks = [
   { label: "Features", href: "#features" },
   { label: "Workflow", href: "#workflow" },
-  { label: "Pricing", href: "#pricing" },
+  // { label: "Pricing", href: "#pricing" },
   { label: "FAQ", href: "#faq" },
 ];
 
@@ -80,6 +80,7 @@ export default function NavBar() {
             className="object-cover"
           />
         </Link>
+        <Link href="/bookmarklet">Install One-Click Bookmarklet →</Link>
 
         <div className="hidden md:flex flex-1 items-center justify-center gap-6 text-sm font-medium text-muted-foreground">
           {navLinks.map((link) => (

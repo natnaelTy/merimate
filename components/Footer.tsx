@@ -6,7 +6,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 const mainLinks = [
   { label: "Features", href: "/#features" },
   { label: "Workflow", href: "/#workflow" },
-  { label: "Pricing", href: "/pricing" },
+  // { label: "Pricing", href: "/pricing" },
   { label: "Sign in", href: "/signin" },
   { label: "Start free", href: "/signup" },
   { label: "Dashboard", href: "/dashboard" },
