@@ -80,7 +80,6 @@ export default function NavBar() {
             className="object-cover"
           />
         </Link>
-        <Link href="/bookmarklet">Install One-Click Bookmarklet →</Link>
 
         <div className="hidden md:flex flex-1 items-center justify-center gap-6 text-sm font-medium text-muted-foreground">
           {navLinks.map((link) => (
