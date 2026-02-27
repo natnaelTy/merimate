@@ -1,8 +1,51 @@
-"use client"
-
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
 import Link from "next/link"
+import StatsCard from "@/components/dashboard/StatsCard"
+import RecentLeads, { type RecentLeadItem } from "@/components/dashboard/RecentLeads"
+
+const previewLeads: RecentLeadItem[] = [
+  {
+    id: "preview-1",
+    clientName: "Northwind Labs",
+    jobTitle: "B2B landing page revamp",
+    status: "proposal",
+    lastContact: "2026-02-18",
+    nextReminderAt: "2026-03-03",
+  },
+  {
+    id: "preview-2",
+    clientName: "Studio Aya",
+    jobTitle: "Shopify store setup",
+    status: "follow-up",
+    lastContact: "2026-02-15",
+    nextReminderAt: "2026-03-01",
+  },
+  {
+    id: "preview-3",
+    clientName: "Brightline",
+    jobTitle: "Mobile app UI kit",
+    status: "won",
+    lastContact: "2026-02-05",
+    nextReminderAt: null,
+  },
+  {
+    id: "preview-4",
+    clientName: "Pulse Media",
+    jobTitle: "SEO + growth sprint",
+    status: "waiting",
+    lastContact: "2026-02-10",
+    nextReminderAt: "2026-03-06",
+  },
+  {
+    id: "preview-5",
+    clientName: "Cobalt Health",
+    jobTitle: "Website refresh",
+    status: "new",
+    lastContact: "2026-02-25",
+    nextReminderAt: "2026-03-04",
+  },
+]
 
 export default function HeroSection() {
   return (
@@ -41,109 +84,104 @@ export default function HeroSection() {
           </Link>
         </div>
 
-        {/* Dashboard mock */}
+        {/* Dashboard preview (matches the real dashboard layout) */}
         <div className="mt-16 relative">
-          <div className="relative overflow-hidden rounded-lg border border-border/60 bg-background/80 shadow-2xl backdrop-blur p-6 text-left sm:p-8">
-
-            <div className="relative flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
-                  Pipeline snapshot
-                </p>
-                <h3 className="text-xl font-semibold">This week</h3>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="rounded-lg bg-emerald-100 px-3 py-1 font-medium text-emerald-900 dark:bg-emerald-700/20 dark:text-emerald-500">
-                  +4 new
-                </span>
-                <span className="rounded-lg px-3 py-1 font-medium bg-amber-100 text-amber-900 dark:bg-amber-700/20 dark:text-amber-500">
-                  2 follow-ups today
-                </span>
-              </div>
-            </div>
-
-            <div className="relative mt-6 grid gap-4 sm:grid-cols-3">
-              <div className="rounded-lg border border-border/60 bg-card/50 p-4 shadow-sm">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Total Leads</span>
-                  <span className="rounded-full bg-muted px-2 py-0.5">+8%</span>
+          <div className="relative overflow-hidden rounded-xl border border-border/60 shadow-2xl">
+            <div className="grid min-h-[560px] lg:grid-cols-[240px_minmax(0,1fr)]">
+              <aside className="hidden lg:flex flex-col bg-sidebar text-sidebar-foreground border-r border-border/60">
+                <div className="flex items-center gap-3 border-b border-border/60 px-4 py-4">
+                  <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground text-sm font-semibold">
+                    M
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold leading-none">Merimate</p>
+                    <p className="text-xs text-muted-foreground">Workspace</p>
+                  </div>
                 </div>
-                <p className="mt-2 text-2xl font-semibold">24</p>
-                <div className="mt-3 h-2 rounded-full bg-muted">
-                  <div className="h-2 w-3/4 rounded-full bg-black/90 dark:bg-white/90" />
-                </div>
-              </div>
-              <div className="rounded-lg border border-border/60 bg-card/50 p-4 shadow-sm">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Won</span>
-                  <span className="rounded-full bg-muted px-2 py-0.5">+3</span>
-                </div>
-                <p className="mt-2 text-2xl font-semibold">9</p>
-                <div className="mt-3 h-2 rounded-full bg-muted">
-                  <div className="h-2 w-1/2 rounded-full bg-emerald-500" />
-                </div>
-              </div>
-              <div className="rounded-lg border border-border/60 bg-card/50 p-4 shadow-sm">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Win Rate</span>
-                  <span className="rounded-full bg-muted px-2 py-0.5">
-                    +5%
-                  </span>
-                </div>
-                <p className="mt-2 text-2xl font-semibold">37%</p>
-                <div className="mt-3 h-2 rounded-full bg-muted">
-                  <div className="h-2 w-2/5 rounded-full bg-amber-500" />
-                </div>
-              </div>
-            </div>
-
-            <div className="relative mt-6 rounded-lg border border-border/60 bg-card/50 p-4 text-sm shadow-sm">
-              <div className="mb-4 flex items-center justify-between">
-                <p className="font-medium">Follow-ups due today</p>
-                <span className="text-xs text-muted-foreground">3 items</span>
-              </div>
-              <ul className="space-y-3">
-                {[
-                  {
-                    name: "John",
-                    project: "Landing page redesign",
-                    channel: "Email",
-                  },
-                  {
-                    name: "Sarah",
-                    project: "Shopify store setup",
-                    channel: "Upwork",
-                  },
-                  {
-                    name: "AgencyX",
-                    project: "Mobile app project",
-                    channel: "LinkedIn",
-                  },
-                ].map((item) => (
-                  <li
-                    key={item.name}
-                    className="flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="h-2 w-2 rounded-full bg-primary" />
-                      <div>
-                        <p className="text-sm font-medium">{item.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {item.project}
-                        </p>
-                      </div>
+                <nav className="flex-1 px-3 py-4 space-y-2 text-sm">
+                  {[
+                    { label: "Dashboard", active: true },
+                    { label: "Analytics", active: false },
+                    { label: "Leads", active: false },
+                    { label: "Follow-ups", active: false },
+                    { label: "Settings", active: false },
+                  ].map((item) => (
+                    <div
+                      key={item.label}
+                      className={`flex items-center gap-3 rounded-lg px-3 py-2 transition ${
+                        item.active
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                          : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
+                      }`}
+                    >
+                      <span className="h-2 w-2 rounded-full bg-primary/70" />
+                      <span>{item.label}</span>
                     </div>
-                    <span className="rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
-                      {item.channel}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+                  ))}
+                </nav>
+                <div className="border-t border-border/60 px-3 py-4">
+                  <div className="flex items-center gap-3 rounded-lg bg-sidebar-accent/60 px-3 py-2">
+                    <div className="size-8 rounded-lg bg-muted flex items-center justify-center text-xs font-semibold">
+                      J
+                    </div>
+                    <div className="text-sm">
+                      <p className="font-semibold leading-none">Jamie</p>
+                      <p className="text-xs text-muted-foreground">Freelancer</p>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+
+              <div className="flex flex-1 flex-col bg-gray-50/90 dark:bg-black/80">
+                <div className="flex h-14 items-center justify-between gap-3 border-b border-border/60 px-4">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span className="hidden sm:inline">Dashboard</span>
+                    <span className="hidden sm:inline">/</span>
+                    <span className="font-medium text-foreground">Overview</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline">
+                      Export
+                    </Button>
+                    <Button size="sm">New lead</Button>
+                  </div>
+                </div>
+
+                <div className="flex flex-1 flex-col gap-4 p-4 text-left">
+                  <div className="grid auto-rows-min gap-4 md:grid-cols-4">
+                    <StatsCard
+                      title="Total leads"
+                      value={24}
+                      description="All active and closed opportunities."
+                    />
+                    <StatsCard
+                      title="Won"
+                      description="Number of leads won"
+                      value={9}
+                    />
+                    <StatsCard
+                      title="Win rate"
+                      value="37%"
+                      description="Won / closed leads."
+                    />
+                    <StatsCard
+                      title="Reminders"
+                      value={3}
+                      description="Due this week."
+                    />
+                  </div>
+
+                  <RecentLeads
+                    className="min-h-[100vh] flex-1 md:min-h-min"
+                    leads={previewLeads}
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
           {/* subtle glow */}
-          <div className="absolute -z-10 inset-0 blur-2xl opacity-20 dark:opacity-10 bg-primary rounded-full" />
+          <div className="absolute -z-10 inset-0 rounded-full bg-primary blur-2xl opacity-20 dark:opacity-10" />
         </div>
       </div>
     </section>
