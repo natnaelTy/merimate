@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 
-export default function NewLeadPage() {
+function NewLeadPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -134,5 +134,13 @@ export default function NewLeadPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function NewLeadPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background p-6" />}>
+      <NewLeadPageContent />
+    </Suspense>
   );
 }
