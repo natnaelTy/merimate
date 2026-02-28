@@ -10,16 +10,41 @@ import { toast } from "sonner";
 import OTPDialog from "@/components/ui/otpdialog";
 
 type Step = "details" | "otp";
+type Mode = "signup" | "waitlist" | "waitlist-success";
 
-export default function SignupForm() {
+type SignupFormProps = {
+  betaOpen: boolean;
+  spotsLeft?: number | null;
+};
+
+export default function SignupForm({ betaOpen, spotsLeft }: SignupFormProps) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("details");
+  const [mode, setMode] = useState<Mode>(betaOpen ? "signup" : "waitlist");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOtpOpen, setIsOtpOpen] = useState(false);
+
+  const requestBetaAccess = async () => {
+    const trimmedEmail = email.trim();
+    const trimmedName = fullName.trim();
+
+    const response = await fetch("/api/beta-signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: trimmedEmail, fullName: trimmedName }),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload?.error || "Unable to check beta access.");
+    }
+
+    return payload?.status as "allowed" | "waitlisted";
+  };
 
   const register = async () => {
     const trimmedEmail = email.trim();
@@ -39,6 +64,27 @@ export default function SignupForm() {
 
     setIsSubmitting(true);
     setError(null);
+
+    try {
+      const betaStatus = await requestBetaAccess();
+      if (betaStatus === "waitlisted") {
+        setMode("waitlist-success");
+        setStep("details");
+        setIsOtpOpen(false);
+        toast.success("You're on the waitlist", {
+          description: "We'll email you when a beta spot opens.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Unable to check beta access.";
+      setError(message);
+      toast.error(message);
+      setIsSubmitting(false);
+      return;
+    }
 
     const supabase = createClientSupabase();
     const { data, error: signUpError } = await supabase.auth.signUp({
@@ -72,6 +118,46 @@ export default function SignupForm() {
     setStep("otp");
     setIsOtpOpen(true);
     setIsSubmitting(false);
+  };
+
+  const joinWaitlist = async () => {
+    const trimmedEmail = email.trim();
+    const trimmedName = fullName.trim();
+    if (!trimmedEmail) {
+      setError("Enter your email to continue.");
+      return;
+    }
+    if (!trimmedName) {
+      setError("Enter your full name to continue.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const betaStatus = await requestBetaAccess();
+      if (betaStatus !== "waitlisted") {
+        setMode("signup");
+        toast.success("A beta spot opened up!", {
+          description: "Please create your account to continue.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      setMode("waitlist-success");
+      toast.success("You're on the waitlist", {
+        description: "We'll email you when a beta spot opens.",
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Unable to join the waitlist.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const verifyOtp = async (token: string) => {
@@ -170,7 +256,49 @@ export default function SignupForm() {
         </div>
       ) : null}
 
-      {step === "details" ? (
+      {mode === "waitlist-success" ? (
+        <div className="space-y-3 rounded-md border border-border/60 bg-card/70 px-4 py-3 text-sm text-muted-foreground">
+          <p className="text-foreground font-medium">You're on the waitlist.</p>
+          <p>We'll email you when a beta spot opens up.</p>
+        </div>
+      ) : mode === "waitlist" ? (
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void joinWaitlist();
+          }}
+        >
+          <div className="space-y-2">
+            <Label htmlFor="fullName">Full name</Label>
+            <Input
+              id="fullName"
+              name="fullName"
+              placeholder="John Doe"
+              autoComplete="name"
+              value={fullName}
+              onChange={(event) => setFullName(event.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="example@gmail.com"
+              autoComplete="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Joining..." : "Join the waitlist"}
+          </Button>
+        </form>
+      ) : step === "details" ? (
         <form
           className="space-y-4"
           onSubmit={(event) => {
@@ -218,6 +346,13 @@ export default function SignupForm() {
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? "Creating..." : "Create account"}
           </Button>
+          {typeof spotsLeft === "number" ? (
+            <p className="text-center text-xs text-muted-foreground">
+              {spotsLeft > 0
+                ? `${spotsLeft} beta spot${spotsLeft === 1 ? "" : "s"} left`
+                : "Beta is full. Join the waitlist above."}
+            </p>
+          ) : null}
         </form>
       ) : (
         <div className="space-y-3">
