@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
 import { differenceInCalendarDays, format } from "date-fns";
+import { Briefcase } from "lucide-react";
 import type { LeadStatus } from "@/types/lead";
 
 const statusVariant: Record<LeadStatus, "default" | "success" | "warning" | "danger"> = {
@@ -78,18 +79,23 @@ export default function RecentLeads({
             <Link
               key={lead.id}
               href={`/leads/${lead.id}`}
-              className="flex items-center justify-between rounded-lg border border-border/60 bg-card/70 px-4 py-3 text-sm transition hover:bg-card/80"
+              className="flex flex-col gap-3 rounded-lg border border-border/60 bg-card/70 px-4 py-3 text-sm transition hover:bg-card/80 sm:flex-row sm:items-center sm:justify-between"
             >
-              <div>
-                <p className="font-medium">{lead.clientName}</p>
-                <p className="text-xs text-muted-foreground">{lead.jobTitle}</p>
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 flex size-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                  <Briefcase className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="font-medium">{lead.clientName}</p>
+                  <p className="text-xs text-muted-foreground">{lead.jobTitle}</p>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2 text-xs sm:justify-end sm:text-sm">
                 {(() => {
                   const meta = getReminderMeta(lead.nextReminderAt);
                   return meta ? (
                     <>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-muted-foreground">
                         {meta.dateLabel}
                       </span>
                       <Badge variant={meta.variant}>{meta.badgeLabel}</Badge>
@@ -97,7 +103,7 @@ export default function RecentLeads({
                   ) : null;
                 })()}
                 <Badge variant={statusVariant[lead.status]}>{lead.status}</Badge>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground">
                   {formatDate(lead.lastContact)}
                 </span>
               </div>
