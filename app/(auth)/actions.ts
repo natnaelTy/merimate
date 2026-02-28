@@ -3,6 +3,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createAdminSupabase } from "@/lib/supabase/admin";
+import { BETA_USER_LIMIT } from "@/lib/beta";
 
 async function getSupabase() {
   return createServerSupabase();
@@ -30,6 +32,20 @@ async function getCallbackUrl() {
   return `${await getSiteUrl()}/auth/callback`;
 }
 
+async function isBetaOpen() {
+  try {
+    const admin = createAdminSupabase();
+    const { count, error } = await admin
+      .from("users")
+      .select("id", { count: "exact", head: true });
+
+    if (error) return false;
+    return (count ?? 0) < BETA_USER_LIMIT;
+  } catch {
+    return false;
+  }
+}
+
 export async function signInWithEmail(formData: FormData) {
   const email = String(formData.get("email") || "").trim();
   if (!email) {
@@ -52,6 +68,10 @@ export async function signInWithEmail(formData: FormData) {
 }
 
 export async function signUpWithEmail(formData: FormData) {
+  if (!(await isBetaOpen())) {
+    redirect("/signup?waitlist=1");
+  }
+
   const email = String(formData.get("email") || "").trim();
   if (!email) {
     redirect("/signup?error=Missing%20email");
@@ -88,5 +108,9 @@ export async function signInWithGoogle() {
 }
 
 export async function signUpWithGoogle() {
+  if (!(await isBetaOpen())) {
+    redirect("/signup?waitlist=1");
+  }
+
   return signInWithGoogle();
 }
