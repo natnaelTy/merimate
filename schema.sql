@@ -52,3 +52,23 @@ CREATE POLICY "Reminders are owned by user"
   FOR ALL
   USING (auth.uid() = "userId")
   WITH CHECK (auth.uid() = "userId");
+
+-- Beta waitlist
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+CREATE TABLE IF NOT EXISTS public.beta_waitlist (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL UNIQUE,
+  full_name TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.beta_waitlist TO anon, authenticated, service_role;
+
+ALTER TABLE public.beta_waitlist ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public can join waitlist" ON public.beta_waitlist;
+CREATE POLICY "Public can join waitlist"
+  ON public.beta_waitlist
+  FOR INSERT
+  WITH CHECK (true);
