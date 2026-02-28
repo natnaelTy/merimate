@@ -1,5 +1,12 @@
 import { Button } from "@/components/ui/button"
-import { ArrowRight } from "lucide-react"
+import {
+  ArrowRight,
+  BarChart3,
+  Bell,
+  LayoutDashboard,
+  Settings,
+  Users,
+} from "lucide-react"
 import Link from "next/link"
 import StatsCard from "@/components/dashboard/StatsCard"
 import RecentLeads, { type RecentLeadItem } from "@/components/dashboard/RecentLeads"
@@ -20,30 +27,6 @@ const previewLeads: RecentLeadItem[] = [
     status: "follow-up",
     lastContact: "2026-02-15",
     nextReminderAt: "2026-03-01",
-  },
-  {
-    id: "preview-3",
-    clientName: "Brightline",
-    jobTitle: "Mobile app UI kit",
-    status: "won",
-    lastContact: "2026-02-05",
-    nextReminderAt: null,
-  },
-  {
-    id: "preview-4",
-    clientName: "Pulse Media",
-    jobTitle: "SEO + growth sprint",
-    status: "waiting",
-    lastContact: "2026-02-10",
-    nextReminderAt: "2026-03-06",
-  },
-  {
-    id: "preview-5",
-    clientName: "Cobalt Health",
-    jobTitle: "Website refresh",
-    status: "new",
-    lastContact: "2026-02-25",
-    nextReminderAt: "2026-03-04",
   },
 ]
 
@@ -77,17 +60,17 @@ export default function HeroSection() {
             </Button>
           </Link>
 
-          <Link href="#pricing">
+          {/* <Link href="#pricing">
             <Button size="lg" variant="outline">
               View Pricing
             </Button>
-          </Link>
+          </Link> */}
         </div>
 
         {/* Dashboard preview (matches the real dashboard layout) */}
         <div className="mt-16 relative">
           <div className="relative overflow-hidden rounded-xl border border-border/60 shadow-2xl">
-            <div className="grid min-h-[560px] lg:grid-cols-[240px_minmax(0,1fr)]">
+            <div className="grid max-h-none lg:max-h-[500px] lg:grid-cols-[240px_minmax(0,1fr)]">
               <aside className="hidden lg:flex flex-col bg-sidebar text-sidebar-foreground border-r border-border/60">
                 <div className="flex items-center gap-3 border-b border-border/60 px-4 py-4">
                   <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground text-sm font-semibold">
@@ -100,11 +83,11 @@ export default function HeroSection() {
                 </div>
                 <nav className="flex-1 px-3 py-4 space-y-2 text-sm">
                   {[
-                    { label: "Dashboard", active: true },
-                    { label: "Analytics", active: false },
-                    { label: "Leads", active: false },
-                    { label: "Follow-ups", active: false },
-                    { label: "Settings", active: false },
+                    { label: "Dashboard", active: true, icon: LayoutDashboard },
+                    { label: "Analytics", active: false, icon: BarChart3 },
+                    { label: "Leads", active: false, icon: Users },
+                    { label: "Follow-ups", active: false, icon: Bell },
+                    { label: "Settings", active: false, icon: Settings },
                   ].map((item) => (
                     <div
                       key={item.label}
@@ -114,7 +97,7 @@ export default function HeroSection() {
                           : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
                       }`}
                     >
-                      <span className="h-2 w-2 rounded-full bg-primary/70" />
+                      <item.icon className="h-4 w-4" />
                       <span>{item.label}</span>
                     </div>
                   ))}
@@ -133,22 +116,24 @@ export default function HeroSection() {
               </aside>
 
               <div className="flex flex-1 flex-col bg-gray-50/90 dark:bg-black/80">
-                <div className="flex h-14 items-center justify-between gap-3 border-b border-border/60 px-4">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 px-4 py-3 sm:py-0 sm:h-14">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground sm:text-sm">
                     <span className="hidden sm:inline">Dashboard</span>
                     <span className="hidden sm:inline">/</span>
                     <span className="font-medium text-foreground">Overview</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline">
+                  <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+                    <Button size="sm" variant="outline" className="w-full sm:w-auto">
                       Export
                     </Button>
-                    <Button size="sm">New lead</Button>
+                    <Button size="sm" className="w-full sm:w-auto">
+                      New lead
+                    </Button>
                   </div>
                 </div>
 
-                <div className="flex flex-1 flex-col gap-4 p-4 text-left">
-                  <div className="grid auto-rows-min gap-4 md:grid-cols-4">
+                <div className="flex flex-1 flex-col gap-3 p-3 text-left sm:gap-4 sm:p-4">
+                  <div className="grid auto-rows-min gap-3 grid-cols-2 lg:grid-cols-4 sm:gap-4">
                     <StatsCard
                       title="Total leads"
                       value={24}
@@ -172,7 +157,7 @@ export default function HeroSection() {
                   </div>
 
                   <RecentLeads
-                    className="min-h-[100vh] flex-1 md:min-h-min"
+                    className="min-h-[240px] flex-1 sm:min-h-[320px] md:min-h-min"
                     leads={previewLeads}
                   />
                 </div>
