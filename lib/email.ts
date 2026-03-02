@@ -13,10 +13,12 @@ type WaitlistEmailInput = {
 
 const getEmailConfig = () => {
   const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from =
+  const rawFrom =
     process.env.REMINDER_EMAIL_FROM?.trim() ||
     process.env.RESEND_FROM_EMAIL?.trim() ||
     process.env.EMAIL_FROM?.trim();
+
+  const from = rawFrom?.replace(/\/+$/, "");
 
   return { apiKey, from };
 };
