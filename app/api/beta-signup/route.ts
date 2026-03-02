@@ -38,10 +38,38 @@ export async function POST(request: Request) {
     .select("id", { count: "exact", head: true });
 
   if (countError) {
-    return NextResponse.json(
-      { error: "Unable to check beta capacity." },
-      { status: 500 }
-    );
+    console.error("Beta capacity check failed:", countError);
+    const { error: waitlistError } = await admin
+      .from("beta_waitlist")
+      .upsert(
+        {
+          email,
+          full_name: fullName || null,
+        },
+        { onConflict: "email" }
+      );
+
+    if (waitlistError) {
+      console.error("Waitlist upsert failed after count error:", waitlistError);
+      return NextResponse.json(
+        { error: "Unable to add you to the waitlist." },
+        { status: 500 }
+      );
+    }
+
+    try {
+      const origin =
+        request.headers.get("origin") || new URL(request.url).origin;
+      await sendWaitlistConfirmationEmail({
+        to: email,
+        fullName,
+        origin,
+      });
+    } catch (error) {
+      console.error("Waitlist email failed", error);
+    }
+
+    return NextResponse.json({ status: "waitlisted" });
   }
 
   if ((count ?? 0) >= BETA_USER_LIMIT) {
