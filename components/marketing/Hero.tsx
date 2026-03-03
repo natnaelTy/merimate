@@ -33,7 +33,7 @@ const previewLeads: RecentLeadItem[] = [
 export default function HeroSection() {
   return (
     <section className="relative py-24 px-6 overflow-hidden">
-      <div className="mx-auto max-w-6xl text-center mt-10">
+      <div className="mx-auto max-w-6xl text-center mt-16">
         {/* Badge */}
         <div className="mb-6 inline-flex items-center rounded-sm bg-primary/10 px-5 py-1.5 text-sm text-primary border border-primary/20">
           Built for freelancers • Powered by AI
@@ -68,7 +68,7 @@ export default function HeroSection() {
         </div>
 
         {/* Dashboard preview (matches the real dashboard layout) */}
-        <div className="mt-16 relative">
+        <div className="mt-20 relative">
           <div className="relative overflow-hidden rounded-xl border border-border/60 shadow-2xl">
             <div className="grid max-h-none lg:max-h-[500px] lg:grid-cols-[240px_minmax(0,1fr)]">
               <aside className="hidden lg:flex flex-col bg-sidebar text-sidebar-foreground border-r border-border/60">
