@@ -68,114 +68,132 @@ export default function NavBar() {
   }, []);
 
   return (
-    <nav
-      className="fixed top-0 left-0 w-full z-50 transition-opacity duration-300 bg-background/80 backdrop-blur border-b border-border/60 p-1">
-      <div className="max-w-6xl w-full flex items-center justify-between mx-auto">
-        <Link href="/">
-          <Image
-            src="/merimate.png"
-            alt="Merimate logo"
-            width={60}
-            height={60}
-            className="object-cover"
-          />
-        </Link>
-
-        <div className="hidden md:flex flex-1 items-center justify-center gap-6 text-sm font-medium text-muted-foreground">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          {authChecked && user ? (
-            <>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  {(() => {
-                    const avatarUrl =
-                      (user.user_metadata?.avatar_url as string | undefined) ??
-                      (user.user_metadata?.picture as string | undefined) ??
-                      null;
-                    const fallbackInitial =
-                      user.email?.charAt(0).toUpperCase() ?? "U";
-
-                    if (avatarUrl) {
-                      return (
-                        <Image
-                          src={avatarUrl}
-                          alt="Profile"
-                          width={32}
-                          height={32}
-                          className="rounded-full"
-                        />
-                      );
-                    }
-
-                    return (
-                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground">
-                        {fallbackInitial}
-                      </span>
-                    );
-                  })()}
-
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>
-                    <div className="flex flex-col">
-                      <span>Account</span>
-                      <span className="text-xs text-muted-foreground">
-                        {user.email ?? "Unknown"}
-                      </span>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard" className="flex items-center gap-2">
-                      <LayoutDashboard className="h-4 w-4" />
-                      Dashboard
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings" className="flex items-center gap-2">
-                      <Settings className="h-4 w-4" />
-                      Settings
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <button
-                      type="button"
-                      onClick={handleSignOut}
-                      className="w-full flex gap-2 items-center text-left"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Sign out
-                    </button>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
-          ) : (
-            <>
-              <Link href="/signin">
-                <Button variant="outline" size="sm">
-                  Sign in
-                </Button>
-              </Link>
-              <Link href="/signup">
-                <Button size="sm">Start free</Button>
-              </Link>
-            </>
-          )}
+    <div className="fixed top-0 left-0 w-full z-50">
+      <div className="h-10 border-b border-border/60 bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-emerald-500/10 text-muted-foreground backdrop-blur">
+        <div className="max-w-6xl w-full h-full mx-auto flex items-center justify-between px-3 text-[10px] leading-5">
+          <span className="inline-flex items-center gap-2 font-medium">
+            <span className="rounded-lg border border-foreground/10 bg-background/70 px-2 py-0.5 text-[9px] tracking-[0.3em] text-foreground/70">
+              MVP
+            </span>
+            <span>We’re in MVP stage — report bugs or share feedback.</span>
+          </span>
+          <Link
+            href="https://tally.so/r/GxryNk"
+            className="rounded-lg border border-foreground/10 bg-background/70 px-2 py-0.5 font-medium text-foreground transition hover:bg-background"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Give feedback
+          </Link>
         </div>
       </div>
-    </nav>
+      <nav className="transition-opacity duration-300 bg-background/80 backdrop-blur border-b border-border/60 p-1">
+        <div className="max-w-6xl w-full flex items-center justify-between mx-auto">
+          <Link href="/">
+            <Image
+              src="/merimate.png"
+              alt="Merimate logo"
+              width={60}
+              height={60}
+              className="object-cover"
+            />
+          </Link>
+
+          <div className="hidden md:flex flex-1 items-center justify-center gap-6 text-sm font-medium text-muted-foreground">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {authChecked && user ? (
+              <>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    {(() => {
+                      const avatarUrl =
+                        (user.user_metadata?.avatar_url as string | undefined) ??
+                        (user.user_metadata?.picture as string | undefined) ??
+                        null;
+                      const fallbackInitial =
+                        user.email?.charAt(0).toUpperCase() ?? "U";
+
+                      if (avatarUrl) {
+                        return (
+                          <Image
+                            src={avatarUrl}
+                            alt="Profile"
+                            width={32}
+                            height={32}
+                            className="rounded-full"
+                          />
+                        );
+                      }
+
+                      return (
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground">
+                          {fallbackInitial}
+                        </span>
+                      );
+                    })()}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>
+                      <div className="flex flex-col">
+                        <span>Account</span>
+                        <span className="text-xs text-muted-foreground">
+                          {user.email ?? "Unknown"}
+                        </span>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard" className="flex items-center gap-2">
+                        <LayoutDashboard className="h-4 w-4" />
+                        Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/settings" className="flex items-center gap-2">
+                        <Settings className="h-4 w-4" />
+                        Settings
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <button
+                        type="button"
+                        onClick={handleSignOut}
+                        className="w-full flex gap-2 items-center text-left"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Sign out
+                      </button>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : (
+              <>
+                <Link href="/signin">
+                  <Button variant="outline" size="sm">
+                    Sign in
+                  </Button>
+                </Link>
+                <Link href="/signup">
+                  <Button size="sm">Start free</Button>
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      </nav>
+    </div>
   );
 }
