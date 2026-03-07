@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
 
-export const runtime = "nodejs";
+const groqApiKey = process.env.GROQ_API_KEY || "";
+const groq = new Groq({ apiKey: groqApiKey });
 
 export async function POST(req: Request) {
-  const groqApiKey = process.env.GROQ_API_KEY;
   const {
     jobTitle,
     description,
@@ -46,12 +46,6 @@ Client: ${clientName || "the client"}
 
 Structure: Greeting, show interest & understanding, highlight relevant skills/experience, propose clear plan/price (keep realistic), call to action. Keep under 400 words. Make it personalized and confident.`;
 
-  const groq = new Groq({
-    apiKey: groqApiKey,
-    timeout: 30000,
-    maxRetries: 2,
-  });
-
   try {
     const model = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
 
@@ -67,14 +61,6 @@ Structure: Greeting, show interest & understanding, highlight relevant skills/ex
     return NextResponse.json({ proposal: generated });
   } catch (error) {
     const message = error instanceof Error ? error.message : "AI error";
-    const cause =
-      error instanceof Error && "cause" in error
-        ? (error as { cause?: unknown }).cause
-        : undefined;
-    console.error("Groq generate-proposal failed", { message, cause, error });
-    return NextResponse.json(
-      { error: "AI error", detail: message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "AI error", detail: message }, { status: 500 });
   }
 }
